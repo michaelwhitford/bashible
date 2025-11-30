@@ -12,7 +12,7 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 VENV_DIR="${SCRIPT_DIR}/.venv"
 
-if [[ ! -d "${VENV_DIR}" ]]; then
+if [[ ! -f "${VENV_DIR}/bin/activate" ]]; then
     echo "Virtual environment not found. Run ./install_ansible first."
     exit 1
 fi

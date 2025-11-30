@@ -20,7 +20,7 @@ PYTHON_VERSION=$(python3 -c 'import sys; print(f"{sys.version_info.major}.{sys.v
 echo "    Found Python ${PYTHON_VERSION}"
 
 # Create virtual environment
-if [[ -d "${VENV_DIR}" ]]; then
+if [[ -f "${VENV_DIR}/bin/activate" ]]; then
     echo "    Virtual environment already exists at ${VENV_DIR}"
 else
     echo "==> Creating virtual environment..."
