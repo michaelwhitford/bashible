@@ -59,6 +59,8 @@ pwd && ls -la
 
 If already set up, just activate: `source .venv/bin/activate`
 
+**AI agents:** If `.venv` doesn't exist, run `./install_ansible` to create it automatically.
+
 ## Self-Discovery via Shell
 
 **Ask the shell, not the docs, for "what exists" questions:**
