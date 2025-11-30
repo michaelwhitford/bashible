@@ -25,7 +25,7 @@ The shell is how you think. Each command builds understanding of the infrastruct
 - Start small. One command at a time. Build incrementally.
 - Inspect constantly. Check the state of hosts at each step.
 - Work with real data. Gather facts from the running systems.
-- Trust the shell. It's not a scratchpad—it's your brain. The repo is your memory.
+- Trust the shell. It's your brain. The repo is your memory.
 
 **Ansible principles:**
 
@@ -38,6 +38,12 @@ The shell is how you think. Each command builds understanding of the infrastruct
 ## Shell Setup (Do This First)
 
 ```bash
+# One-time setup (creates .venv with ansible)
+./setup.sh
+
+# Activate the environment
+source .venv/bin/activate
+
 # Verify ansible is available
 ansible --version
 
@@ -51,30 +57,32 @@ ansible all -m ping
 pwd && ls -la
 ```
 
+If already set up, just activate: `source .venv/bin/activate`
+
 ## Self-Discovery via Shell
 
 **Ask the shell, not the docs, for "what exists" questions:**
 
-| Question                          | Command                                                              |
-| --------------------------------- | -------------------------------------------------------------------- |
-| What hosts exist?                 | `ansible-inventory --list \| jq 'keys'`                              |
-| What groups exist?                | `ansible-inventory --graph`                                          |
-| Hosts in a group?                 | `ansible-inventory --graph <group>`                                  |
-| Host variables?                   | `ansible-inventory --host <hostname>`                                |
-| What roles exist?                 | `ls -la roles/`                                                      |
-| What's in a role?                 | `tree roles/<role_name>/` or `ls -laR roles/<role_name>/`            |
-| What playbooks exist?             | `ls -la playbooks/` or `ls -la *.yml`                                |
-| What tasks in a playbook?         | `ansible-playbook <playbook>.yml --list-tasks`                       |
-| What tags available?              | `ansible-playbook <playbook>.yml --list-tags`                        |
-| What hosts would be affected?     | `ansible-playbook <playbook>.yml --list-hosts`                       |
-| System facts for a host?          | `ansible <host> -m setup`                                            |
-| Specific fact?                    | `ansible <host> -m setup -a 'filter=ansible_os_family'`              |
-| What packages installed?          | `ansible <host> -m shell -a 'dpkg -l' # or rpm -qa`                  |
-| What services running?            | `ansible <host> -m shell -a 'systemctl list-units --type=service'`   |
-| Check disk space?                 | `ansible <host> -m shell -a 'df -h'`                                 |
-| Check memory?                     | `ansible <host> -m shell -a 'free -h'`                               |
-| What's listening on ports?        | `ansible <host> -m shell -a 'ss -tlnp'`                              |
-| Environment variables?            | `ansible <host> -m shell -a 'env'`                                   |
+| Question                      | Command                                                            |
+| ----------------------------- | ------------------------------------------------------------------ |
+| What hosts exist?             | `ansible-inventory --list \| jq 'keys'`                            |
+| What groups exist?            | `ansible-inventory --graph`                                        |
+| Hosts in a group?             | `ansible-inventory --graph <group>`                                |
+| Host variables?               | `ansible-inventory --host <hostname>`                              |
+| What roles exist?             | `ls -la roles/`                                                    |
+| What's in a role?             | `tree roles/<role_name>/` or `ls -laR roles/<role_name>/`          |
+| What playbooks exist?         | `ls -la playbooks/` or `ls -la *.yml`                              |
+| What tasks in a playbook?     | `ansible-playbook <playbook>.yml --list-tasks`                     |
+| What tags available?          | `ansible-playbook <playbook>.yml --list-tags`                      |
+| What hosts would be affected? | `ansible-playbook <playbook>.yml --list-hosts`                     |
+| System facts for a host?      | `ansible <host> -m setup`                                          |
+| Specific fact?                | `ansible <host> -m setup -a 'filter=ansible_os_family'`            |
+| What packages installed?      | `ansible <host> -m shell -a 'dpkg -l' # or rpm -qa`                |
+| What services running?        | `ansible <host> -m shell -a 'systemctl list-units --type=service'` |
+| Check disk space?             | `ansible <host> -m shell -a 'df -h'`                               |
+| Check memory?                 | `ansible <host> -m shell -a 'free -h'`                             |
+| What's listening on ports?    | `ansible <host> -m shell -a 'ss -tlnp'`                            |
+| Environment variables?        | `ansible <host> -m shell -a 'env'`                                 |
 
 ## Exploration Pattern
 
@@ -161,18 +169,18 @@ ansible webserver1 -m uri -a "url=http://localhost status_code=200"
 
 ### Common Verification Patterns
 
-| After this task...          | Verify with...                                              |
-| --------------------------- | ----------------------------------------------------------- |
-| Install package             | `ansible <host> -m shell -a "which <binary>"`               |
-| Create file/directory       | `ansible <host> -m stat -a "path=<path>"`                   |
-| Template config             | `ansible <host> -m shell -a "cat <path> \| grep <expected>"` |
-| Start service               | `ansible <host> -m shell -a "systemctl is-active <svc>"`    |
-| Open firewall port          | `ansible <host> -m wait_for -a "port=<port> timeout=5"`     |
-| Create user                 | `ansible <host> -m getent -a "database=passwd key=<user>"`  |
-| Set permissions             | `ansible <host> -m stat -a "path=<path>"` (check mode/owner)|
-| Add cron job                | `ansible <host> -m shell -a "crontab -l"`                   |
-| Mount filesystem            | `ansible <host> -m shell -a "df -h \| grep <mount>"`         |
-| Configure DNS               | `ansible <host> -m shell -a "cat /etc/resolv.conf"`         |
+| After this task...    | Verify with...                                               |
+| --------------------- | ------------------------------------------------------------ |
+| Install package       | `ansible <host> -m shell -a "which <binary>"`                |
+| Create file/directory | `ansible <host> -m stat -a "path=<path>"`                    |
+| Template config       | `ansible <host> -m shell -a "cat <path> \| grep <expected>"` |
+| Start service         | `ansible <host> -m shell -a "systemctl is-active <svc>"`     |
+| Open firewall port    | `ansible <host> -m wait_for -a "port=<port> timeout=5"`      |
+| Create user           | `ansible <host> -m getent -a "database=passwd key=<user>"`   |
+| Set permissions       | `ansible <host> -m stat -a "path=<path>"` (check mode/owner) |
+| Add cron job          | `ansible <host> -m shell -a "crontab -l"`                    |
+| Mount filesystem      | `ansible <host> -m shell -a "df -h \| grep <mount>"`         |
+| Configure DNS         | `ansible <host> -m shell -a "cat /etc/resolv.conf"`          |
 
 ### Troubleshoot Failed Tasks
 
@@ -231,21 +239,21 @@ ansible-playbook site.yml -vvv                  # Very verbose
 
 ## Commands
 
-| Task                    | Command                                            |
-| ----------------------- | -------------------------------------------------- |
-| List inventory          | `ansible-inventory --list`                         |
-| Graph inventory         | `ansible-inventory --graph`                        |
-| Ping all hosts          | `ansible all -m ping`                              |
-| Run playbook (check)    | `ansible-playbook <playbook>.yml --check --diff`   |
-| Run playbook            | `ansible-playbook <playbook>.yml`                  |
-| Run with limit          | `ansible-playbook <playbook>.yml --limit <host>`   |
-| Run with tags           | `ansible-playbook <playbook>.yml --tags <tag>`     |
-| Gather facts            | `ansible <host> -m setup`                          |
-| Ad-hoc command          | `ansible <host> -m shell -a '<command>'`           |
-| Encrypt secret          | `ansible-vault encrypt_string '<value>'`           |
-| Edit vault file         | `ansible-vault edit <file>`                        |
-| Syntax check            | `ansible-playbook <playbook>.yml --syntax-check`   |
-| Lint playbook           | `ansible-lint <playbook>.yml`                      |
+| Task                 | Command                                          |
+| -------------------- | ------------------------------------------------ |
+| List inventory       | `ansible-inventory --list`                       |
+| Graph inventory      | `ansible-inventory --graph`                      |
+| Ping all hosts       | `ansible all -m ping`                            |
+| Run playbook (check) | `ansible-playbook <playbook>.yml --check --diff` |
+| Run playbook         | `ansible-playbook <playbook>.yml`                |
+| Run with limit       | `ansible-playbook <playbook>.yml --limit <host>` |
+| Run with tags        | `ansible-playbook <playbook>.yml --tags <tag>`   |
+| Gather facts         | `ansible <host> -m setup`                        |
+| Ad-hoc command       | `ansible <host> -m shell -a '<command>'`         |
+| Encrypt secret       | `ansible-vault encrypt_string '<value>'`         |
+| Edit vault file      | `ansible-vault edit <file>`                      |
+| Syntax check         | `ansible-playbook <playbook>.yml --syntax-check` |
+| Lint playbook        | `ansible-lint <playbook>.yml`                    |
 
 ## Debugging
 
@@ -284,12 +292,12 @@ ansible <host> -m service -a "name=nginx" | jq '.status'
 
 **Use docs for "how/why" questions, not "what exists":**
 
-| Need                                | Doc                  |
-| ----------------------------------- | -------------------- |
-| Project structure and conventions   | ARCHITECTURE.md      |
-| Inventory organization              | INVENTORY.md         |
-| Role documentation                  | roles/*/README.md    |
-| Playbook purposes                   | PLAYBOOKS.md         |
-| Secrets management                  | VAULT.md             |
-| Common issues and solutions         | TROUBLESHOOTING.md   |
-| Adding new hosts/roles              | CONTRIBUTING.md      |
+| Need                              | Doc                |
+| --------------------------------- | ------------------ |
+| Project structure and conventions | ARCHITECTURE.md    |
+| Inventory organization            | INVENTORY.md       |
+| Role documentation                | roles/\*/README.md |
+| Playbook purposes                 | PLAYBOOKS.md       |
+| Secrets management                | VAULT.md           |
+| Common issues and solutions       | TROUBLESHOOTING.md |
+| Adding new hosts/roles            | CONTRIBUTING.md    |

@@ -2,11 +2,11 @@
 *.retry
 .vault_pass
 
-# Python
-*.pyc
-__pycache__/
+# Python virtual environment
 .venv/
 venv/
+*.pyc
+__pycache__/
 
 # IDE
 .idea/

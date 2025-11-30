@@ -1,0 +1,6 @@
+# Bashible Python dependencies
+# Install with: pip install -r requirements.txt
+
+ansible>=2.15,<3.0
+ansible-lint>=6.0
+jmespath  # For json_query filter

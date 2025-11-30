@@ -28,8 +28,11 @@ The essential capability: **live shell execution**. This lets the AI agent inspe
 ## Quick Start
 
 ```bash
-# Verify ansible is installed
-ansible --version
+# One-time setup (creates .venv with ansible)
+./setup.sh
+
+# Activate the environment
+source .venv/bin/activate
 
 # Check inventory
 ansible-inventory --graph
@@ -38,7 +41,13 @@ ansible-inventory --graph
 ansible all -m ping
 
 # Dry-run the site playbook
-ansible-playbook site.yml --check --diff
+ansible-playbook playbooks/site.yml --check --diff
+```
+
+Alternatively, use the wrapper script without activating:
+```bash
+./ansible.sh ansible-inventory --graph
+./ansible.sh ansible-playbook playbooks/site.yml --check
 ```
 
 > **AI agents start here → `AGENTS.md`**
