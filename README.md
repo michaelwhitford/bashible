@@ -29,7 +29,7 @@ The essential capability: **live shell execution**. This lets the AI agent inspe
 
 ```bash
 # One-time setup (creates .venv with ansible)
-./setup.sh
+./install_ansible
 
 # Activate the environment
 source .venv/bin/activate

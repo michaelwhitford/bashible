@@ -39,7 +39,7 @@ The shell is how you think. Each command builds understanding of the infrastruct
 
 ```bash
 # One-time setup (creates .venv with ansible)
-./setup.sh
+./install_ansible
 
 # Activate the environment
 source .venv/bin/activate

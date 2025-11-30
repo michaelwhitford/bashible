@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
-# Setup script for Bashible
-# Creates a Python virtual environment and installs Ansible
+# Install Ansible into a Python virtual environment
+# Usage: ./install_ansible
 
 set -euo pipefail
 
