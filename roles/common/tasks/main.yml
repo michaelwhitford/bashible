@@ -13,6 +13,16 @@
     msg: "{{ ansible_distribution }} {{ ansible_distribution_version }}"
   tags: [common, info]
 
+- name: Display system summary
+  debug:
+    msg: |
+      Hostname: {{ ansible_fqdn }}
+      OS: {{ ansible_distribution }} {{ ansible_distribution_version }}
+      Kernel: {{ ansible_kernel }}
+      CPUs: {{ ansible_processor_vcpus }}
+      Memory: {{ ansible_memtotal_mb }}MB
+  tags: [common, info, summary]
+
 # Add your common tasks below
 # Examples:
 #

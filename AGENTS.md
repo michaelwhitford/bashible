@@ -4,6 +4,16 @@ Ansible automation via bash. Designed for AI agents with shell access.
 
 Planning: PLAN.md | Changes: CHANGELOG.md | Scratchpad: SCRATCHPAD.md
 
+## TL;DR
+
+```bash
+source .venv/bin/activate    # Activate ansible environment
+ansible-inventory --graph    # See what hosts exist
+ansible all -m ping          # Test connectivity
+```
+
+No `.venv`? Run `./install_ansible` first.
+
 ## Using SCRATCHPAD.md
 
 **SCRATCHPAD.md is your working scratchpad.** Use it to:
@@ -65,26 +75,42 @@ If already set up, just activate: `source .venv/bin/activate`
 
 **Ask the shell, not the docs, for "what exists" questions:**
 
+### Discover the Repo
+
+| Question                  | Command                                              |
+| ------------------------- | ---------------------------------------------------- |
+| What's in this project?   | `ls -la`                                             |
+| What config is Ansible using? | `ansible --version`                              |
+| What's configured?        | `cat ansible.cfg`                                    |
+| What roles exist?         | `ls roles/`                                          |
+| What's in a role?         | `ls -la roles/<role_name>/`                          |
+| What playbooks exist?     | `ls playbooks/`                                      |
+| What tasks in a playbook? | `ansible-playbook <playbook>.yml --list-tasks`       |
+| What tags available?      | `ansible-playbook <playbook>.yml --list-tags`        |
+
+### Discover the Infrastructure
+
 | Question                      | Command                                                            |
 | ----------------------------- | ------------------------------------------------------------------ |
-| What hosts exist?             | `ansible-inventory --list \| jq 'keys'`                            |
+| What hosts exist?             | `ansible-inventory --graph`                                        |
 | What groups exist?            | `ansible-inventory --graph`                                        |
 | Hosts in a group?             | `ansible-inventory --graph <group>`                                |
 | Host variables?               | `ansible-inventory --host <hostname>`                              |
-| What roles exist?             | `ls -la roles/`                                                    |
-| What's in a role?             | `tree roles/<role_name>/` or `ls -laR roles/<role_name>/`          |
-| What playbooks exist?         | `ls -la playbooks/` or `ls -la *.yml`                              |
-| What tasks in a playbook?     | `ansible-playbook <playbook>.yml --list-tasks`                     |
-| What tags available?          | `ansible-playbook <playbook>.yml --list-tags`                      |
 | What hosts would be affected? | `ansible-playbook <playbook>.yml --list-hosts`                     |
-| System facts for a host?      | `ansible <host> -m setup`                                          |
-| Specific fact?                | `ansible <host> -m setup -a 'filter=ansible_os_family'`            |
-| What packages installed?      | `ansible <host> -m shell -a 'dpkg -l' # or rpm -qa`                |
-| What services running?        | `ansible <host> -m shell -a 'systemctl list-units --type=service'` |
-| Check disk space?             | `ansible <host> -m shell -a 'df -h'`                               |
-| Check memory?                 | `ansible <host> -m shell -a 'free -h'`                             |
-| What's listening on ports?    | `ansible <host> -m shell -a 'ss -tlnp'`                            |
-| Environment variables?        | `ansible <host> -m shell -a 'env'`                                 |
+
+### Discover Host State
+
+| Question                  | Command                                                            |
+| ------------------------- | ------------------------------------------------------------------ |
+| Is host reachable?        | `ansible <host> -m ping`                                           |
+| All system facts?         | `ansible <host> -m setup`                                          |
+| Specific fact?            | `ansible <host> -m setup -a 'filter=ansible_os_family'`            |
+| What packages installed?  | `ansible <host> -m shell -a 'rpm -qa'` or `dpkg -l`                |
+| What services running?    | `ansible <host> -m shell -a 'systemctl list-units --type=service'` |
+| Check disk space?         | `ansible <host> -m shell -a 'df -h'`                               |
+| Check memory?             | `ansible <host> -m shell -a 'free -h'`                             |
+| What's listening?         | `ansible <host> -m shell -a 'ss -tlnp'`                            |
+| Environment variables?    | `ansible <host> -m shell -a 'env'`                                 |
 
 ## Exploration Pattern
 
@@ -297,9 +323,5 @@ ansible <host> -m service -a "name=nginx" | jq '.status'
 | Need                              | Doc                |
 | --------------------------------- | ------------------ |
 | Project structure and conventions | ARCHITECTURE.md    |
-| Inventory organization            | INVENTORY.md       |
 | Role documentation                | roles/\*/README.md |
-| Playbook purposes                 | PLAYBOOKS.md       |
-| Secrets management                | VAULT.md           |
 | Common issues and solutions       | TROUBLESHOOTING.md |
-| Adding new hosts/roles            | CONTRIBUTING.md    |

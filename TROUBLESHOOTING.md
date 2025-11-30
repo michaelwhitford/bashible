@@ -2,6 +2,27 @@
 
 Common issues and solutions when working with Bashible.
 
+## Diagnose First
+
+Before looking for solutions, gather information:
+
+```bash
+# What host am I trying to reach?
+ansible-inventory --host <hostname>
+
+# Can I reach it at all?
+ansible <host> -m ping -vvv
+
+# What's the actual error?
+ansible <host> -m setup 2>&1 | head -50
+
+# What user/key is being used?
+ansible <host> -m ping -vvvv 2>&1 | grep -E "(SSH|ESTABLISH|user)"
+
+# What does the target see?
+ssh <user>@<host> "whoami && id && sudo -l"
+```
+
 ## Connection Issues
 
 ### "Host unreachable" or SSH timeout

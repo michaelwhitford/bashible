@@ -97,22 +97,12 @@ bashible/
 
 ## Documentation for AI Agents
 
-### Project Guides (Get Things Done)
-
 | File                   | Purpose                                             |
 | ---------------------- | --------------------------------------------------- |
 | `AGENTS.md`            | **Start here** — Shell setup, discovery commands    |
 | `ARCHITECTURE.md`      | System overview and conventions                     |
 | `TROUBLESHOOTING.md`   | Error diagnosis and fixes                           |
-| `CONTRIBUTING.md`      | How to add hosts, roles, playbooks                  |
-
-### Per-Component Docs
-
-| Location               | Purpose                                             |
-| ---------------------- | --------------------------------------------------- |
 | `roles/*/README.md`    | Role-specific documentation                         |
-| `inventory/README.md`  | Inventory organization                              |
-| `playbooks/README.md`  | Playbook purposes and dependencies                  |
 
 ## Development
 

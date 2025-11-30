@@ -4,68 +4,78 @@
 
 Bashible is an Ansible project structured for AI-agent collaboration. The design prioritizes discoverability—an AI with shell access can understand the infrastructure through commands, not just documentation.
 
-## Discover via Shell
+## Discover the Project
 
 ```bash
-# What exists?
+# What's in this repo?
+ls -la
+
+# What's the directory structure?
+find . -type f -name "*.yml" | head -20
+
+# What roles exist?
+ls roles/
+
+# What's in a role?
+ls -la roles/common/
+
+# What playbooks exist?
+ls playbooks/
+```
+
+## Discover the Configuration
+
+```bash
+# What config is Ansible using?
+ansible --version                    # Shows config file path
+
+# What's in the config?
+cat ansible.cfg
+
+# Where does inventory come from?
+grep inventory ansible.cfg
+
+# What are the privilege settings?
+grep -A3 "\[privilege_escalation\]" ansible.cfg
+```
+
+## Discover the Infrastructure
+
+```bash
+# What hosts/groups exist?
 ansible-inventory --graph
-ls roles/ playbooks/
 
-# What would happen?
-ansible-playbook site.yml --list-tasks --list-hosts
+# What variables does a host have?
+ansible-inventory --host <hostname>
 
-# What is the current state?
-ansible all -m setup -a 'filter=ansible_os_family'
+# What's the current state of a host?
+ansible <host> -m setup
+
+# What would a playbook do?
+ansible-playbook playbooks/site.yml --list-tasks --list-hosts
 ```
 
 See **AGENTS.md** for complete discovery patterns.
 
 ## Directory Structure
 
+Discover it yourself:
+```bash
+find . -type d -not -path './.venv/*' -not -path './.git/*' | head -20
 ```
-bashible/
-├── ansible.cfg            # Ansible settings (inventory path, defaults)
-├── inventory/
-│   ├── hosts.yml          # Host definitions and groupings
-│   ├── group_vars/
-│   │   ├── all.yml        # Variables for all hosts
-│   │   └── <group>.yml    # Variables per group
-│   └── host_vars/
-│       └── <host>.yml     # Variables per host
-├── playbooks/
-│   ├── site.yml           # Main entry point
-│   └── <purpose>.yml      # Purpose-specific playbooks
-├── roles/
-│   └── <role_name>/
-│       ├── README.md      # Role documentation
-│       ├── tasks/
-│       │   └── main.yml   # Task definitions
-│       ├── handlers/
-│       │   └── main.yml   # Event handlers (restarts, etc)
-│       ├── templates/
-│       │   └── *.j2       # Jinja2 templates
-│       ├── files/         # Static files
-│       ├── vars/
-│       │   └── main.yml   # Role variables
-│       └── defaults/
-│           └── main.yml   # Default values (overridable)
-└── files/                 # Global static files
-```
+
+Standard Ansible layout:
+- `ansible.cfg` — Ansible settings (inventory path, defaults)
+- `inventory/` — Host and group definitions
+- `playbooks/` — Task orchestration
+- `roles/` — Reusable automation units
+- `files/` — Static files to deploy
 
 ## Configuration
 
-### ansible.cfg
-
-```ini
-[defaults]
-inventory = inventory/hosts.yml
-roles_path = roles
-retry_files_enabled = False
-host_key_checking = False  # For development only
-
-[privilege_escalation]
-become = True
-become_method = sudo
+Discover it:
+```bash
+cat ansible.cfg
 ```
 
 ### Variable Precedence (lowest to highest)
