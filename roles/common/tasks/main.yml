@@ -1,0 +1,33 @@
+# Common role - tasks applied to all hosts
+#
+# This role contains baseline configuration that every host should have.
+# Customize for your environment.
+
+---
+- name: Gather facts
+  setup:
+  tags: [common, facts]
+
+- name: Display OS information
+  debug:
+    msg: "{{ ansible_distribution }} {{ ansible_distribution_version }}"
+  tags: [common, info]
+
+# Add your common tasks below
+# Examples:
+#
+# - name: Ensure common packages are installed
+#   package:
+#     name:
+#       - curl
+#       - vim
+#       - htop
+#     state: present
+#   tags: [common, packages]
+#
+# - name: Ensure time synchronization is configured
+#   service:
+#     name: chronyd
+#     state: started
+#     enabled: yes
+#   tags: [common, time]

@@ -1,0 +1,13 @@
+# Main site playbook
+# Entry point for full infrastructure configuration
+#
+# Usage:
+#   ansible-playbook playbooks/site.yml --check --diff  # Dry run
+#   ansible-playbook playbooks/site.yml --limit host1   # Single host
+#   ansible-playbook playbooks/site.yml                 # Full run
+
+---
+- name: Configure all hosts
+  hosts: all
+  roles:
+    - common

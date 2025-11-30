@@ -1,0 +1,129 @@
+# Bashible
+
+An AI-agent-friendly interface for working with Ansible via bash.
+
+## What Is This?
+
+This project is a **bootstrapped foundation** for AI-assisted infrastructure automation. It provides:
+
+- **AI-ready documentation** - `AGENTS.md` gives AI assistants everything they need to understand and modify infrastructure
+- **Shell-driven discovery** - Clear patterns for exploring inventory, roles, and system state
+- **Layered structure** - Separation of concerns that AI agents can reason about and extend
+- **Working examples** - Real playbooks and roles to learn from, not just documentation
+
+**Goal:** An AI agent should be able to load this repo and start working with Ansible inventory, roles, and playbooks in under 2 minutes.
+
+## AI Agent Requirements
+
+To work with this project, your AI agent needs shell access via one of these tools:
+
+| Tool                                                  | Description                                    |
+| ----------------------------------------------------- | ---------------------------------------------- |
+| [Claude Code](https://docs.anthropic.com/claude-code) | Claude's official CLI with shell tool          |
+| [Aider](https://aider.chat)                           | AI pair programming with shell access          |
+| [MCP Shell Server](https://modelcontextprotocol.io)   | Any MCP client with shell tool                 |
+
+The essential capability: **live shell execution**. This lets the AI agent inspect infrastructure state, run ad-hoc commands, test playbooks incrementally, and verify changes work before committing.
+
+## Quick Start
+
+```bash
+# Verify ansible is installed
+ansible --version
+
+# Check inventory
+ansible-inventory --graph
+
+# Test connectivity
+ansible all -m ping
+
+# Dry-run the site playbook
+ansible-playbook site.yml --check --diff
+```
+
+> **AI agents start here → `AGENTS.md`**
+>
+> The shell is your primary tool. Use it to discover what exists at runtime—don't just read files to understand the infrastructure. AGENTS.md provides the setup and discovery commands.
+
+## Project Structure
+
+```
+bashible/
+├── AGENTS.md              # AI agent guide (start here)
+├── README.md              # This file
+├── ARCHITECTURE.md        # System design and conventions
+├── TROUBLESHOOTING.md     # Common issues and solutions
+├── ansible.cfg            # Ansible configuration
+├── inventory/             # Host and group definitions
+│   ├── hosts.yml          # Inventory file
+│   ├── group_vars/        # Variables by group
+│   └── host_vars/         # Variables by host
+├── playbooks/             # Task orchestration
+│   └── site.yml           # Main playbook
+├── roles/                 # Reusable automation units
+│   └── common/            # Example role
+└── files/                 # Static files to deploy
+```
+
+## Architecture
+
+```
+┌─────────────────────────────────────────────────────────┐
+│                    Playbooks                            │
+│              (Orchestration - what to do)               │
+├─────────────────────────────────────────────────────────┤
+│                      Roles                              │
+│              (Reusable units of work)                   │
+├─────────────────────────────────────────────────────────┤
+│                   Inventory                             │
+│              (Hosts + groups + variables)               │
+├─────────────────────────────────────────────────────────┤
+│                  Ansible Modules                        │
+│              (Built-in actions)                         │
+├─────────────────────────────────────────────────────────┤
+│                  Target Systems                         │
+│              (SSH/WinRM connections)                    │
+└─────────────────────────────────────────────────────────┘
+```
+
+## Documentation for AI Agents
+
+### Project Guides (Get Things Done)
+
+| File                   | Purpose                                             |
+| ---------------------- | --------------------------------------------------- |
+| `AGENTS.md`            | **Start here** — Shell setup, discovery commands    |
+| `ARCHITECTURE.md`      | System overview and conventions                     |
+| `TROUBLESHOOTING.md`   | Error diagnosis and fixes                           |
+| `CONTRIBUTING.md`      | How to add hosts, roles, playbooks                  |
+
+### Per-Component Docs
+
+| Location               | Purpose                                             |
+| ---------------------- | --------------------------------------------------- |
+| `roles/*/README.md`    | Role-specific documentation                         |
+| `inventory/README.md`  | Inventory organization                              |
+| `playbooks/README.md`  | Playbook purposes and dependencies                  |
+
+## Development
+
+```bash
+# Syntax check
+ansible-playbook site.yml --syntax-check
+
+# Lint
+ansible-lint
+
+# Dry run with diff
+ansible-playbook site.yml --check --diff
+
+# Run against one host first
+ansible-playbook site.yml --limit hostname
+
+# Run with verbose output
+ansible-playbook site.yml -vvv
+```
+
+## License
+
+MIT License

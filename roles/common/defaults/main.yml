@@ -1,0 +1,10 @@
+# Default variables for common role
+# These can be overridden in group_vars, host_vars, or playbook vars
+
+---
+# common_packages:
+#   - curl
+#   - vim
+#   - htop
+
+# common_timezone: UTC

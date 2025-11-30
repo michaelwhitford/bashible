@@ -1,0 +1,30 @@
+# Ansible
+*.retry
+.vault_pass
+
+# Python
+*.pyc
+__pycache__/
+.venv/
+venv/
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Secrets - never commit unencrypted secrets
+# Use ansible-vault for sensitive data
+*.secret
+*.key
+!*.key.example
+
+# Temp files
+tmp/
+.tmp/

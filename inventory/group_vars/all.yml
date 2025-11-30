@@ -1,0 +1,9 @@
+# Variables for all hosts
+# These apply to every host in the inventory
+#
+# Override per-group in group_vars/<group>.yml
+# Override per-host in host_vars/<host>.yml
+
+# Example variables - customize for your environment
+# ansible_user: deploy
+# ansible_python_interpreter: /usr/bin/python3

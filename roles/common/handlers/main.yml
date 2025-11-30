@@ -1,0 +1,8 @@
+# Handlers for common role
+# These are triggered by tasks using 'notify'
+
+---
+# - name: Restart chronyd
+#   service:
+#     name: chronyd
+#     state: restarted
