@@ -103,6 +103,101 @@ ansible-playbook site.yml --limit webserver1
 ansible-playbook site.yml --limit webservers
 ```
 
+## Verify with Ad-hoc Commands
+
+**Before writing a playbook task, test the module ad-hoc. After running, verify the result.**
+
+This is the core workflow: ad-hoc → playbook → ad-hoc verify.
+
+### Test Modules Before Writing Tasks
+
+```bash
+# Test package installation (check mode)
+ansible webserver1 -m apt -a "name=nginx state=present" --check
+
+# Test file creation
+ansible webserver1 -m file -a "path=/etc/app state=directory mode=0755" --check
+
+# Test template (copy content)
+ansible webserver1 -m copy -a "content='server_name example.com;' dest=/tmp/test.conf" --check
+
+# Test service management
+ansible webserver1 -m service -a "name=nginx state=started" --check
+
+# Test user creation
+ansible webserver1 -m user -a "name=deploy shell=/bin/bash" --check
+```
+
+### Verify State After Playbook Runs
+
+```bash
+# Verify package installed
+ansible webserver1 -m package_facts
+ansible webserver1 -m shell -a "dpkg -l | grep nginx"  # Debian
+ansible webserver1 -m shell -a "rpm -q nginx"          # RHEL
+
+# Verify file exists with correct permissions
+ansible webserver1 -m stat -a "path=/etc/nginx/nginx.conf"
+
+# Verify file content
+ansible webserver1 -m shell -a "cat /etc/nginx/nginx.conf"
+ansible webserver1 -m slurp -a "src=/etc/nginx/nginx.conf" | jq -r '.content' | base64 -d
+
+# Verify service running
+ansible webserver1 -m service_facts
+ansible webserver1 -m shell -a "systemctl status nginx"
+ansible webserver1 -m shell -a "systemctl is-active nginx"
+
+# Verify port listening
+ansible webserver1 -m wait_for -a "port=80 timeout=5"
+ansible webserver1 -m shell -a "ss -tlnp | grep :80"
+
+# Verify user exists
+ansible webserver1 -m getent -a "database=passwd key=deploy"
+
+# Verify connectivity/response
+ansible webserver1 -m uri -a "url=http://localhost status_code=200"
+```
+
+### Common Verification Patterns
+
+| After this task...          | Verify with...                                              |
+| --------------------------- | ----------------------------------------------------------- |
+| Install package             | `ansible <host> -m shell -a "which <binary>"`               |
+| Create file/directory       | `ansible <host> -m stat -a "path=<path>"`                   |
+| Template config             | `ansible <host> -m shell -a "cat <path> \| grep <expected>"` |
+| Start service               | `ansible <host> -m shell -a "systemctl is-active <svc>"`    |
+| Open firewall port          | `ansible <host> -m wait_for -a "port=<port> timeout=5"`     |
+| Create user                 | `ansible <host> -m getent -a "database=passwd key=<user>"`  |
+| Set permissions             | `ansible <host> -m stat -a "path=<path>"` (check mode/owner)|
+| Add cron job                | `ansible <host> -m shell -a "crontab -l"`                   |
+| Mount filesystem            | `ansible <host> -m shell -a "df -h \| grep <mount>"`         |
+| Configure DNS               | `ansible <host> -m shell -a "cat /etc/resolv.conf"`         |
+
+### Troubleshoot Failed Tasks
+
+When a playbook task fails, reproduce it ad-hoc with verbose output:
+
+```bash
+# Run the exact module with -vvv to see what's happening
+ansible webserver1 -m apt -a "name=nginx state=present" -vvv
+
+# Check preconditions
+ansible webserver1 -m setup -a "filter=ansible_os_family"  # Right OS?
+ansible webserver1 -m shell -a "whoami"                     # Right user?
+ansible webserver1 -m shell -a "sudo -l"                    # Has sudo?
+
+# Check if resource already exists (idempotency issues)
+ansible webserver1 -m stat -a "path=/etc/nginx"
+ansible webserver1 -m shell -a "id nginx"                   # User exists?
+
+# Check disk space (common failure cause)
+ansible webserver1 -m shell -a "df -h"
+
+# Check network (for downloads/API calls)
+ansible webserver1 -m shell -a "curl -I https://example.com"
+```
+
 ## Starter Examples
 
 Common patterns for exploration and execution:
