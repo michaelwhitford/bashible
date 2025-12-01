@@ -4,6 +4,10 @@
 # Override per-group in group_vars/<group>.yml
 # Override per-host in host_vars/<host>.yml
 
+---
+# Silence Python interpreter discovery warnings
+# See: https://docs.ansible.com/ansible-core/2.20/reference_appendices/interpreter_discovery.html
+ansible_python_interpreter: auto_silent
+
 # Example variables - customize for your environment
 # ansible_user: deploy
-# ansible_python_interpreter: /usr/bin/python3

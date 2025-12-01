@@ -1,0 +1,10 @@
+# Host-specific variables go here
+# Create files named after hosts: <hostname>.yml
+#
+# Example: inventory/host_vars/web1.yml
+#
+# ---
+# nginx_worker_processes: 8  # Override for this specific host
+# custom_packages:
+#   - htop
+#   - strace

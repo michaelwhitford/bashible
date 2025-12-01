@@ -1,0 +1,15 @@
+# Jinja2 templates go here
+# Templates are processed with variables and copied to remote hosts
+#
+# Example: templates/motd.j2
+#
+# Welcome to {{ ansible_facts['fqdn'] }}
+# OS: {{ ansible_facts['distribution'] }} {{ ansible_facts['distribution_version'] }}
+# Managed by Ansible - do not edit manually
+#
+# Usage in task:
+#   - name: Configure MOTD
+#     template:
+#       src: motd.j2
+#       dest: /etc/motd
+#       mode: '0644'

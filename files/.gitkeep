@@ -1,0 +1,12 @@
+# Static files to deploy go here
+# Files are copied as-is to remote hosts (no template processing)
+#
+# Example: files/authorized_keys
+#
+# Usage in task:
+#   - name: Copy authorized keys
+#     copy:
+#       src: authorized_keys
+#       dest: /home/deploy/.ssh/authorized_keys
+#       owner: deploy
+#       mode: '0600'

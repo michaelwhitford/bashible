@@ -159,10 +159,12 @@ Use modules instead of shell/command when possible. If shell is required, add `c
     - app_deploy
 ```
 
-### Ad-hoc Playbook (One-off tasks)
+### Utility Playbook (One-off tasks)
+
+For tasks that don't fit into roles—quick operational actions. Not to be confused with **ad-hoc commands** (single shell invocations like `ansible localhost -a 'whoami'`).
 
 ```yaml
-# playbooks/adhoc/restart_services.yml
+# playbooks/utility/restart_services.yml
 ---
 - name: Restart all services
   hosts: "{{ target_hosts | default('all') }}"
