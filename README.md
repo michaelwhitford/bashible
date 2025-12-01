@@ -17,14 +17,14 @@ This project is a **bootstrapped foundation** for AI-assisted infrastructure aut
 
 This project works with **any AI agent that has access to a bash tool**. Examples include:
 
-| Tool                                                  | Description                                    |
-| ----------------------------------------------------- | ---------------------------------------------- |
-| [ECA](https://eca.dev)                                | Editor Code Assistant with shell tool          |
-| [Claude Code](https://docs.anthropic.com/claude-code) | Claude's official CLI with shell tool          |
-| [Aider](https://aider.chat)                           | AI pair programming with shell access          |
-| [MCP Shell Server](https://modelcontextprotocol.io)   | Any MCP client with shell tool                 |
+| Tool                             | Description                           |
+| -------------------------------- | ------------------------------------- |
+| [ECA](https://eca.dev)           | Editor Code Assistant with shell tool |
+| [Claude Code](https://claude.ai) | Claude's official CLI with shell tool |
+| [Aider](https://aider.chat)      | AI pair programming with shell access |
 
 **System requirements:**
+
 - **Python 3.9+** — Required for Ansible
 - **Bash** — For shell commands and the install script
 
@@ -52,6 +52,7 @@ ansible-playbook playbooks/site.yml --check --diff
 ```
 
 Alternatively, use the wrapper script without activating:
+
 ```bash
 ./ansible.sh ansible-inventory --graph
 ./ansible.sh ansible-playbook playbooks/site.yml --check
@@ -62,13 +63,15 @@ Alternatively, use the wrapper script without activating:
 The inventory includes a placeholder host (`your-server`) to demonstrate group management. To use it:
 
 1. **Edit the inventory** — Update `inventory/hosts.yml`:
+
    ```yaml
    your-server:
-     ansible_host: 192.168.1.100  # Replace with real IP or hostname
-     ansible_user: deploy          # SSH user (optional)
+     ansible_host: 192.168.1.100 # Replace with real IP or hostname
+     ansible_user: deploy # SSH user (optional)
    ```
 
 2. **Ensure SSH access** — You should be able to run:
+
    ```bash
    ssh deploy@192.168.1.100
    ```
@@ -127,12 +130,12 @@ bashible/
 
 ## Documentation for AI Agents
 
-| File                   | Purpose                                             |
-| ---------------------- | --------------------------------------------------- |
-| `AGENTS.md`            | **Start here** — Shell setup, discovery commands    |
-| `ARCHITECTURE.md`      | System overview and conventions                     |
-| `TROUBLESHOOTING.md`   | Error diagnosis and fixes                           |
-| `roles/*/README.md`    | Role-specific documentation                         |
+| File                 | Purpose                                          |
+| -------------------- | ------------------------------------------------ |
+| `AGENTS.md`          | **Start here** — Shell setup, discovery commands |
+| `ARCHITECTURE.md`    | System overview and conventions                  |
+| `TROUBLESHOOTING.md` | Error diagnosis and fixes                        |
+| `roles/*/README.md`  | Role-specific documentation                      |
 
 ## Development
 
