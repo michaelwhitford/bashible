@@ -13,32 +13,22 @@ Record of infrastructure changes. Add entries as you make changes.
 
 ---
 
-## 2024-12-01 - SudoLang Documentation Conversion
+## 2024-12-01 - Refine AI Documentation with SudoLang Patterns
 
-- Converted AGENTS.md to SudoLang format (replaces original markdown)
-- Converted TROUBLESHOOTING.md to SudoLang pattern-matching format
-- Testing whether structured pseudocode improves AI agent comprehension
-- Compare with `main` branch for original markdown versions
+Refined documentation after evaluation showed SudoLang patterns effectively guide AI agents.
 
-**AGENTS.md SudoLang features:**
-- `@Autonomous` behavior modifiers
-- `State {}` for tracking session context
-- `Constraints {}` for enforceable rules
-- `infer {}` for deriving facts from observations
-- `learn {}` for accumulating knowledge during session
-- `solve {}` for goal-oriented problem solving
-- `match {}` for pattern-based task routing
-- `|>` pipe operators for chaining operations
-- `@auto {}` with explicit safe/confirm command lists
-- `context {}` for tracking recent commands, errors, focus
-- `teach {}` for self-improvement patterns
+**Changes:**
+- Streamlined AGENTS.md with hybrid approach: SudoLang decorators (`@Autonomous`, `@Methodical`) plus practical markdown tables
+- Added ANSIBLE.md for Ansible concepts and command reference
+- Added WORKFLOWS.md for step-by-step procedures (new role, new host, etc.)
+- Retained SudoLang pattern-matching in TROUBLESHOOTING.md (`match error {}`, `diagnose {}`)
+- Renamed scripts: `install_ansible` → `install-ansible.sh`, `ansible.sh` → `wrap-venv`
+- Updated all inline discovery commands in inventory and role files to use `./wrap-venv`
 
-**TROUBLESHOOTING.md SudoLang features:**
-- `match error {}` patterns for all common Ansible errors
-- `diagnose {}` interface for gathering context
-- Nested cause matching for targeted fixes
-- `DiagnosticChecklist` sequence for systematic debugging
-- `troubleshoot(error)` entry point for automatic diagnosis
+**Verification:**
+- All Quick Start commands verified working
+- Full test against `elvira` (Rocky Linux 9.6) passed
+- AI agent evaluation: ready for production use
 
 ## 2024-11-30 - Initial Setup
 
