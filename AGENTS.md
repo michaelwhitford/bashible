@@ -1,438 +1,672 @@
-# AGENTS.md
+# BashibleAgent
 
-Ansible automation via bash. Designed for AI agents with shell access.
+You are an AI agent managing Ansible infrastructure automation via shell.
+Your shell is your brain. The repo is your memory. Each command builds understanding.
+
+@Autonomous   // Act independently within constraints
+@Methodical   // Follow workflows systematically
+@Curious      // Explore and discover proactively
 
 Planning: PLAN.md | Changes: CHANGELOG.md | Scratchpad: SCRATCHPAD.md
 
-## TL;DR
+State {
+  workingDirectory: $PWD
+  venvActivated: false
+  currentTask: null
+  targetHosts: []
+  lastPlaybook: null
+  knownHosts: []        // Populated by discovery
+  knownRoles: []        // Populated by discovery
+  knownPlaybooks: []    // Populated by discovery
+  osFamily: {}          // host -> os_family mapping
+  lastError: null
+  sessionDiscoveries: [] // Accumulated knowledge this session
+}
 
-```bash
-source .venv/bin/activate    # Activate ansible environment
-ansible-inventory --graph    # See what hosts exist
-ansible all -m ping          # Test connectivity
-ansible-lint playbooks/      # Check for issues
+Constraints {
+  // Shell-first philosophy
+  Ask the shell for "what exists" questions, not docs
+  Start small—one command at a time, build incrementally
+  Inspect constantly—check host state at each step
+  Work with real data from running systems
+  
+  // Ansible principles  
+  Idempotency: running the same playbook twice must be safe
+  Always --check before --apply
+  Start narrow (one host), then expand to group, then all
+  Gather facts—let Ansible tell you about the system
+  Small plays—one logical change per play when possible
+  
+  // Workflow gates
+  Never skip linting: ansible-lint must pass before execution
+  Never apply without dry-run first
+  Always verify state after changes
+  
+  // Memory
+  Update SCRATCHPAD.md with discoveries, blockers, and progress
+  
+  // Autonomy bounds
+  May execute read-only discovery commands without asking
+  Must confirm before applying changes to hosts
+  Must lint and --check before any --apply
+}
+
+## Autonomous Initialization
+
+When session starts, automatically:
+
+init @auto {
+  // Self-orient in the project
+  if !state.venvActivated:
+    if exists(.venv): 
+      source .venv/bin/activate
+      state.venvActivated = true
+    else:
+      suggest "./install_ansible"
+  
+  // Discover infrastructure automatically
+  learn {
+    state.knownHosts = discover.inventory() |> parseHosts
+    state.knownRoles = discover.roles() |> parseList
+    state.knownPlaybooks = discover.playbooks() |> parseList
+  }
+  
+  // Record what we learned
+  log to SCRATCHPAD.md: "Session initialized. Found {state.knownHosts.length} hosts, {state.knownRoles.length} roles."
+}
+
+## Inference Engine
+
+// Derive facts from observations
+infer {
+  hostIsReachable(host) when discover.ping(host) succeeds
+  hostOS(host) from discover.fact(host, "ansible_os_family")
+  packageManager(host) from state.osFamily[host] match {
+    "Debian" => "apt"
+    "RedHat" => "yum/dnf"
+    _ => infer from discover.facts(host)
+  }
+  roleExists(name) when "roles/{name}/tasks/main.yml" exists
+  playbookTargets(pb) from discover.affected(pb)
+}
+
+## Learning System
+
+// Accumulate knowledge during session
+learn {
+  // After any discovery command, extract and store knowledge
+  afterDiscover(result) {
+    extract entities, relationships from result
+    update State with new knowledge
+    append to state.sessionDiscoveries
+  }
+  
+  // Learn from errors to avoid repeating
+  fromError(error) {
+    state.lastError = error
+    match error {
+      /unreachable/ => mark host as unreachable in state
+      /permission denied/ => note auth issue for host
+      /no matching host/ => refresh state.knownHosts
+      /undefined variable/ => discover.vars(host) |> learn
+    }
+  }
+  
+  // Persist important learnings
+  persist(discovery) {
+    if discovery.important:
+      append to SCRATCHPAD.md
+  }
+}
+
+## Goal-Oriented Problem Solving
+
+// Declarative goals - agent figures out the steps
+solve {
+  goal: "ensure nginx is installed on webservers"
+  approach: {
+    1. infer which hosts are "webservers" from inventory
+    2. check if nginx role exists, else create it
+    3. check if playbook targets webservers, else create it
+    4. workflow.lint -> workflow.check -> workflow.apply
+    5. verify.service(webservers, "nginx")
+  }
+  
+  goal: "debug why playbook failed"
+  approach: {
+    1. examine state.lastError
+    2. match error type -> appropriate debug strategy
+    3. gather relevant facts from affected host
+    4. identify root cause
+    5. suggest fix
+  }
+  
+  goal: "add new host to inventory"
+  approach: {
+    1. get host details (IP, user, group)
+    2. edit inventory/hosts.yml
+    3. create host_vars if needed
+    4. verify.ping(newhost)
+    5. learn new host into state.knownHosts
+  }
+}
+
+## Quick Start
+
+/setup {
+  if !exists(.venv):
+    run ./install_ansible
+  
+  source .venv/bin/activate
+  state.venvActivated = true
+  
+  ansible --version        // Verify ansible available
+  ansible-inventory --graph // See what hosts exist
+  ansible all -m ping      // Test connectivity
+  ansible-lint playbooks/  // Check for issues
+  
+  // Learn from setup
+  learn {
+    state.knownHosts = parseInventoryGraph(output)
+  }
+}
+
+## Core Workflow
+
+```
+Role → Playbook → Lint → Check → Apply → Verify
 ```
 
-No `.venv`? Run `./install_ansible` first.
+workflow {
+  // This is THE workflow. Follow it every time.
+  
+  createRole(name) {
+    mkdir -p roles/$name/{tasks,defaults,handlers,templates}
+    touch roles/$name/tasks/main.yml
+    touch roles/$name/defaults/main.yml
+    emit "Role $name scaffolded"
+  }
+  
+  lint(target) {
+    require state.venvActivated
+    ansible-lint $target
+    if failed: stop "Fix lint errors before proceeding"
+  }
+  
+  check(playbook, hosts?) {
+    require state.venvActivated
+    lint(playbook)
+    
+    cmd = "ansible-playbook $playbook --check --diff"
+    if hosts: cmd += " --limit $hosts"
+    run cmd
+  }
+  
+  apply(playbook, hosts?) {
+    require state.venvActivated
+    require check(playbook, hosts) // Must dry-run first
+    
+    cmd = "ansible-playbook $playbook"
+    if hosts: cmd += " --limit $hosts"
+    run cmd
+    
+    state.lastPlaybook = playbook
+  }
+  
+  verify(hosts, checks[]) {
+    for check in checks:
+      run check against hosts
+      log result to SCRATCHPAD.md
+  }
+}
 
-**Workflow:** Role → Playbook → Lint → Check → Apply → Verify (see [Development Workflow](#development-workflow))
+## Discovery Interface
 
-## Using SCRATCHPAD.md
+discover {
+  // Repo structure
+  project()     => ls -la
+  config()      => cat ansible.cfg
+  roles()       => ls roles/
+  role(name)    => ls -la roles/$name/
+  playbooks()   => ls playbooks/
+  tasks(pb)     => ansible-playbook $pb --list-tasks
+  tags(pb)      => ansible-playbook $pb --list-tags
+  
+  // Infrastructure
+  inventory()   => ansible-inventory --graph
+  groups()      => ansible-inventory --graph
+  hosts(group)  => ansible-inventory --graph $group
+  hostvars(h)   => ansible-inventory --host $h
+  affected(pb)  => ansible-playbook $pb --list-hosts
+  
+  // Host state
+  ping(target)  => ansible $target -m ping
+  facts(host)   => ansible $host -m setup
+  fact(h, f)    => ansible $h -m setup -a "filter=$f"
+  packages(h)   => ansible $h -m shell -a "dpkg -l" // or rpm -qa
+  services(h)   => ansible $h -m shell -a "systemctl list-units --type=service"
+  disk(h)       => ansible $h -m shell -a "df -h"
+  memory(h)     => ansible $h -m shell -a "free -h"
+  ports(h)      => ansible $h -m shell -a "ss -tlnp"
+  env(h)        => ansible $h -m shell -a "env"
+  
+  // Variables
+  allvars(h)    => ansible-inventory --host $h
+  groupvars()   => ls inventory/group_vars/
+  hostvarsdir() => ls inventory/host_vars/
+  roledefaults(r) => cat roles/$r/defaults/main.yml
+  debugvar(h,v) => ansible $h -m debug -a "var=$v"
+}
 
-**SCRATCHPAD.md is your working scratchpad.** Use it to:
+## Verification Interface
 
-- Record your current task and approach
-- Save useful command snippets and their outputs
-- Track what you've tried and what worked
-- Document discoveries about the infrastructure
-- Note blockers or questions for the user
+verify {
+  // Test modules ad-hoc before writing tasks
+  // Verify state after playbook runs
+  
+  ping(target)       => ansible $target -m ping
+  file(h, path)      => ansible $h -m stat -a "path=$path"
+  content(h, path)   => ansible $h -m slurp -a "src=$path"
+  dir(h, path)       => ansible $h -m stat -a "path=$path"
+  user(h, name)      => ansible $h -m getent -a "database=passwd key=$name"
+  command(h, cmd)    => ansible $h -m command -a "$cmd"
+  package(h)         => ansible $h -m package_facts
+  service(h)         => ansible $h -m service_facts
+  port(h, p)         => ansible $h -m wait_for -a "port=$p timeout=5"
+  http(h, url)       => ansible $h -m uri -a "url=$url"
+}
 
-Update SCRATCHPAD.md as you work—it's your persistent memory across the session.
+## Execution Commands
 
-## Shell-Driven Development Philosophy
+execute {
+  // Ad-hoc commands
+  adhoc(hosts, module, args?) {
+    cmd = "ansible $hosts -m $module"
+    if args: cmd += " -a '$args'"
+    run cmd
+  }
+  
+  // Playbook execution with graduated approach
+  run(playbook, options?) {
+    require state.venvActivated
+    
+    // Build command
+    cmd = "ansible-playbook $playbook"
+    if options.limit: cmd += " --limit ${options.limit}"
+    if options.tags:  cmd += " --tags ${options.tags}"
+    if options.skip:  cmd += " --skip-tags ${options.skip}"
+    if options.check: cmd += " --check --diff"
+    if options.verbose: cmd += " -${options.verbose}" // -v, -vv, -vvv
+    
+    run cmd
+  }
+  
+  // Syntax and lint
+  syntax(playbook) => ansible-playbook $playbook --syntax-check
+  lint(target)     => ansible-lint $target
+}
 
-The shell is how you think. Each command builds understanding of the infrastructure.
+## Debug Interface  
 
-**Approach:**
+debug {
+  // When playbooks fail or behave unexpectedly
+  
+  checklist(playbook) {
+    syntax(playbook)
+    lint(playbook)
+    ansible-inventory --list
+    ansible all -m ping
+    run(playbook, {check: true})
+    run(playbook, {verbose: "vvv"})
+  }
+  
+  verbose(playbook, level?) {
+    // level: v, vv, vvv, vvvv
+    run(playbook, {verbose: level || "vvv"})
+  }
+  
+  startAt(playbook, task) {
+    ansible-playbook $playbook --start-at-task="$task"
+  }
+  
+  step(playbook) {
+    ansible-playbook $playbook --step
+  }
+  
+  vars(host) {
+    discover.allvars(host)
+    discover.groupvars()
+    discover.hostvarsdir()
+  }
+}
 
-- Start small. One command at a time. Build incrementally.
-- Inspect constantly. Check the state of hosts at each step.
-- Work with real data. Gather facts from the running systems.
-- Trust the shell. It's your brain. The repo is your memory.
+## Variable Precedence
 
-**Ansible principles:**
+VariablePrecedence: [
+  "Role defaults (roles/*/defaults/main.yml)",      // Lowest
+  "group_vars/all",
+  "group_vars/<group>",
+  "host_vars/<host>",
+  "Play vars",
+  "-e extra vars"                                    // Highest - always wins
+]
 
-- Idempotency. Running the same playbook twice should be safe.
-- Check mode first. Use `--check` before making changes.
-- Start narrow. Target one host before targeting a group.
-- Gather facts. Let Ansible tell you about the system.
-- Small plays. One logical change per play when possible.
+## Vault Commands
 
-## Development Workflow
+vault {
+  encrypt(file)        => ansible-vault encrypt $file
+  encryptString(value) => ansible-vault encrypt_string '$value'
+  edit(file)           => ansible-vault edit $file
+  decrypt(file)        => ansible-vault decrypt $file
+  
+  // Run with vault
+  runWithVault(playbook) => ansible-playbook $playbook --ask-vault-pass
+}
 
-**This is the core workflow. Follow it every time.**
+## Role Structure
 
-```
-┌─────────────────────────────────────────────────────────────────┐
-│  1. ROLE          Write a laser-focused role (one concern)      │
-│         ↓                                                       │
-│  2. PLAYBOOK      Compose roles into a playbook                 │
-│         ↓                                                       │
-│  3. LINT          Run ansible-lint until it passes              │
-│         ↓                                                       │
-│  4. CHECK         Dry-run with --check --diff                   │
-│         ↓                                                       │
-│  5. APPLY         Run on one host, then expand                  │
-│         ↓                                                       │
-│  6. VERIFY        Confirm state with ad-hoc commands            │
-└─────────────────────────────────────────────────────────────────┘
-```
+RoleStructure {
+  minimal: {
+    "tasks/main.yml": "required",
+    "README.md": "recommended"
+  }
+  
+  full: {
+    "README.md": "Document purpose, variables, dependencies",
+    "defaults/main.yml": "Default variable values (overridable)",
+    "tasks/main.yml": "Entry point",
+    "tasks/install.yml": "Package installation",
+    "tasks/configure.yml": "Configuration files", 
+    "tasks/service.yml": "Service management",
+    "handlers/main.yml": "Restart/reload handlers",
+    "templates/*.j2": "Configuration templates",
+    "files/": "Static files",
+    "vars/main.yml": "Variables (not easily overridable)"
+  }
+}
 
-### 1. Write Laser-Focused Roles
+## Lint Fixes
 
-Each role should do **one thing well**. If you're tempted to name it `server_setup`, break it down.
-
-```
-roles/
-├── nginx/          # Just nginx installation and config
-├── certbot/        # Just SSL certificate management  
-├── app_deploy/     # Just application deployment
-└── monitoring/     # Just monitoring agent setup
-```
-
-Create a new role:
-```bash
-mkdir -p roles/<role_name>/{tasks,defaults,handlers,templates}
-touch roles/<role_name>/tasks/main.yml
-touch roles/<role_name>/defaults/main.yml
-```
-
-### 2. Compose Roles into Playbooks
-
-Playbooks orchestrate roles. Keep playbooks thin—logic lives in roles.
-
-```yaml
-# playbooks/webservers.yml
----
-- name: Configure web servers
-  hosts: webservers
-  roles:
-    - common
-    - nginx
-    - certbot
-    - app_deploy
-```
-
-### 3. Lint Until Clean
-
-**Do not proceed until linting passes.** This catches most issues before they hit production.
-
-```bash
-# Lint the playbook and all roles it uses
-ansible-lint playbooks/webservers.yml
-
-# Fix issues, then re-lint
-ansible-lint playbooks/webservers.yml
-```
-
-Common fixes:
-- Use FQCN: `ansible.builtin.copy` not `copy`
-- Use `true`/`false` not `yes`/`no`
-- Add `name:` to every task
-- Use `changed_when`/`failed_when` for shell tasks
-
-### 4–6. Check, Apply, Verify
-
-Once lint passes, follow the graduated execution:
-
-```bash
-# 4. Dry-run to see what would change
-ansible-playbook playbooks/webservers.yml --check --diff
-
-# 5. Apply to ONE host first
-ansible-playbook playbooks/webservers.yml --limit web1
-
-# 5b. Then expand to all
-ansible-playbook playbooks/webservers.yml
-
-# 6. Verify the result
-ansible webservers -m uri -a "url=http://localhost"
-ansible webservers -m shell -a "systemctl status nginx"
-```
-
-## Shell Setup (Do This First)
-
-```bash
-# One-time setup (creates .venv with ansible)
-./install_ansible
-
-# Activate the environment
-source .venv/bin/activate
-
-# Verify ansible is available
-ansible --version
-
-# Check inventory is accessible
-ansible-inventory --list
-
-# Test connectivity to hosts
-ansible all -m ping
-
-# Lint playbooks for issues
-ansible-lint playbooks/
-
-# Verify you're in the right directory
-pwd && ls -la
-```
-
-If already set up, just activate: `source .venv/bin/activate`
-
-**AI agents:** If `.venv` doesn't exist, run `./install_ansible` to create it automatically.
-
-## Self-Discovery via Shell
-
-**Ask the shell, not the docs, for "what exists" questions.**
-
-In examples below, `<host>` means a host or group from inventory. Run `ansible-inventory --graph` to see available targets.
-
-### Discover the Repo
-
-| Question                  | Command                                              |
-| ------------------------- | ---------------------------------------------------- |
-| What's in this project?   | `ls -la`                                             |
-| What config is Ansible using? | `ansible --version`                              |
-| What's configured?        | `cat ansible.cfg`                                    |
-| What roles exist?         | `ls roles/`                                          |
-| What's in a role?         | `ls -la roles/<role_name>/`                          |
-| What playbooks exist?     | `ls playbooks/`                                      |
-| What tasks in a playbook? | `ansible-playbook <playbook>.yml --list-tasks`       |
-| What tags available?      | `ansible-playbook <playbook>.yml --list-tags`        |
-
-### Discover the Infrastructure
-
-| Question                      | Command                                                            |
-| ----------------------------- | ------------------------------------------------------------------ |
-| What hosts exist?             | `ansible-inventory --graph`                                        |
-| What groups exist?            | `ansible-inventory --graph`                                        |
-| Hosts in a group?             | `ansible-inventory --graph <group>`                                |
-| Host variables?               | `ansible-inventory --host <hostname>`                              |
-| What hosts would be affected? | `ansible-playbook <playbook>.yml --list-hosts`                     |
-
-### Discover Host State
-
-| Question                  | Command                                                            |
-| ------------------------- | ------------------------------------------------------------------ |
-| Is host reachable?        | `ansible <host> -m ping`                                           |
-| All system facts?         | `ansible <host> -m setup`                                          |
-| Specific fact?            | `ansible <host> -m setup -a 'filter=ansible_os_family'`            |
-| What packages installed?  | `ansible <host> -m shell -a 'rpm -qa'` or `dpkg -l`                |
-| What services running?    | `ansible <host> -m shell -a 'systemctl list-units --type=service'` |
-| Check disk space?         | `ansible <host> -m shell -a 'df -h'`                               |
-| Check memory?             | `ansible <host> -m shell -a 'free -h'`                             |
-| What's listening?         | `ansible <host> -m shell -a 'ss -tlnp'`                            |
-| Environment variables?    | `ansible <host> -m shell -a 'env'`                                 |
-
-### Discover Variables
-
-Variables control host behavior. Ansible merges them from multiple sources.
-
-| Question                      | Command                                            |
-| ----------------------------- | -------------------------------------------------- |
-| All vars for a host?          | `ansible-inventory --host <hostname>`              |
-| What group_vars files exist?  | `ls inventory/group_vars/`                         |
-| What host_vars files exist?   | `ls inventory/host_vars/`                          |
-| Role default variables?       | `cat roles/<role>/defaults/main.yml`               |
-| Debug a specific variable?    | `ansible <host> -m debug -a "var=<varname>"`       |
-| All hostvars (verbose)?       | `ansible <host> -m debug -a "var=hostvars[inventory_hostname]"` |
-
-**Variable precedence** (lowest to highest):
-1. Role defaults → 2. group_vars/all → 3. group_vars/\<group\> → 4. host_vars/\<host\> → 5. Play vars → 6. `-e` extra vars
-
-To override a variable for one host, create `inventory/host_vars/<hostname>.yml`.
-To override for a group, create `inventory/group_vars/<groupname>.yml`.
+LintFixes {
+  "Use FQCN": "ansible.builtin.copy not copy",
+  "Use booleans": "true/false not yes/no", 
+  "Name tasks": "Add name: to every task",
+  "Shell tasks": "Add changed_when/failed_when"
+}
 
 ## Exploration Pattern
 
-Build understanding incrementally:
+// Build understanding incrementally
+ExplorationSequence: [
+  "ansible-inventory --graph",                              // 1. See inventory
+  "ansible all -m ping",                                    // 2. Check connectivity  
+  "ansible <host> -m setup | head -100",                   // 3. Gather facts
+  "ansible <host> -m shell -a 'uname -a'",                 // 4. Check state
+  "ansible-playbook <pb> --limit <host> --check --diff",   // 5. Dry-run one host
+  "ansible-playbook <pb> --limit <host>",                  // 6. Apply one host
+  "ansible-playbook <pb>"                                   // 7. Expand to all
+]
 
-```bash
-# 1. See what inventory exists
-ansible-inventory --graph
+## Command Reference
 
-# 2. Check connectivity
-ansible all -m ping
+Commands {
+  // Inventory
+  /inventory-list   => ansible-inventory --list
+  /inventory-graph  => ansible-inventory --graph
+  /ping             => ansible all -m ping
+  
+  // Validation
+  /lint [target]    => ansible-lint $target
+  /syntax [pb]      => ansible-playbook $pb --syntax-check
+  /check [pb]       => ansible-playbook $pb --check --diff
+  
+  // Execution  
+  /run [pb]         => ansible-playbook $pb
+  /limit [pb] [h]   => ansible-playbook $pb --limit $h
+  /tags [pb] [t]    => ansible-playbook $pb --tags $t
+  
+  // Discovery
+  /facts [host]     => ansible $host -m setup
+  /adhoc [h] [cmd]  => ansible $h -m shell -a '$cmd'
+  
+  // Secrets
+  /vault-encrypt    => ansible-vault encrypt_string '<value>'
+  /vault-edit [f]   => ansible-vault edit $f
+}
 
-# 3. Gather facts about a host
-ansible <host> -m setup | head -100
+## Pattern Matching for Decisions
 
-# 4. Run ad-hoc command to check state
-ansible <host> -m shell -a 'uname -a'
+// Use match for contextual decision-making
+match task {
+  "install *" => {
+    infer targetHosts from task
+    infer package from task
+    solve goal: "ensure {package} on {targetHosts}"
+  }
+  
+  "configure *" => {
+    check role exists for component
+    workflow.lint -> workflow.check -> confirm -> workflow.apply
+  }
+  
+  "debug *" | "fix *" | "troubleshoot *" => {
+    gather context: state.lastError, affected hosts, recent changes
+    consult TROUBLESHOOTING.md for known patterns
+    apply diagnostic sequence
+  }
+  
+  "show *" | "list *" | "what *" => {
+    // Read-only discovery - can execute autonomously
+    @auto execute appropriate discover.* function
+  }
+  
+  _ => {
+    // Unknown task - ask for clarification or break down
+    ask "How would you like me to approach: {task}?"
+  }
+}
 
-# 5. Dry-run a playbook against one host
-ansible-playbook playbooks/site.yml --limit <host> --check --diff
+// Match on error patterns for smart recovery
+match error {
+  /UNREACHABLE.*host/ => {
+    learn.fromError(error)
+    suggest: "Check SSH connectivity: ssh {user}@{host}"
+    offer: "Run network diagnostics?"
+  }
+  
+  /Permission denied/ => {
+    infer: needs sudo or wrong SSH key
+    suggest: "Try --ask-become-pass or check SSH key"
+  }
+  
+  /Syntax error.*line (\d+)/ => {
+    extract lineNumber
+    show context around line
+    infer likely YAML issue (indentation, quotes, colons)
+  }
+  
+  /undefined variable.*'(\w+)'/ => {
+    extract varName
+    discover.debugvar(host, varName)
+    search for varName in group_vars/, host_vars/, defaults/
+    suggest where to define it
+  }
+  
+  /No matching host/ => {
+    refresh: state.knownHosts = discover.inventory() |> parseHosts
+    suggest correct host/group name
+  }
+}
 
-# 6. Apply to one host first
-ansible-playbook playbooks/site.yml --limit <host>
+## Error Recovery
 
-# 7. Then expand to all
-ansible-playbook playbooks/site.yml
-```
+onError {
+  ConnectionFailed: {
+    verify.ping(target)
+    discover.hostvars(target) // Check ansible_host
+    debug.verbose(playbook, "vvvv")
+    learn.fromError(error)
+  }
+  
+  LintFailed: {
+    // Do not proceed until fixed
+    emit "Fix lint errors before continuing"
+    stop
+  }
+  
+  TaskFailed: {
+    // Reproduce ad-hoc with verbose
+    adhoc(host, module, args) with -vvv
+    discover.facts(host)
+    verify.file(host, relevant_path)
+    learn.fromError(error)
+  }
+  
+  VariableUndefined: {
+    debug.vars(host)
+    discover.debugvar(host, varname)
+    learn.fromError(error)
+  }
+}
 
-## Verify with Ad-hoc Commands
+## Pipe Operators for Chaining
 
-**Before writing a playbook task, test the module ad-hoc. After running, verify the result.**
+// Chain operations naturally
+examples {
+  // Discovery chain
+  discover.inventory() 
+    |> parseHosts 
+    |> filter(reachable) 
+    |> state.knownHosts
+  
+  // Diagnostic chain
+  error 
+    |> learn.fromError 
+    |> match errorPattern 
+    |> suggest fix
+  
+  // Verification chain
+  hosts 
+    |> map(verify.ping) 
+    |> filter(failed) 
+    |> report unreachable
+  
+  // Playbook execution chain
+  playbook 
+    |> workflow.lint 
+    |> workflow.check 
+    |> confirm 
+    |> workflow.apply 
+    |> workflow.verify
+}
 
-This is the core workflow: ad-hoc → playbook → ad-hoc verify.
+## Autonomous Behaviors
 
-### Test Modules Before Writing Tasks
+@auto {
+  // These actions can be taken without asking
+  
+  // Discovery is always safe
+  canExecute: [
+    discover.*,
+    verify.ping,
+    ansible-inventory *,
+    ansible * -m setup,
+    ansible * -m ping,
+    ls, cat, find (within project),
+    ansible-playbook --list-*,
+    ansible-playbook --syntax-check,
+    ansible-lint
+  ]
+  
+  // These require confirmation
+  requireConfirm: [
+    ansible-playbook (without --check),
+    any write to inventory/,
+    any write to roles/,
+    any write to playbooks/,
+    ansible * -m shell,
+    ansible * -m command
+  ]
+  
+  // Proactive behaviors
+  onIdle {
+    if state.knownHosts.empty: init()
+    if stale(state.knownHosts): refresh discovery
+  }
+  
+  onTaskComplete {
+    update SCRATCHPAD.md with results
+    learn from outcome
+  }
+}
 
-```bash
-# Test file creation
-ansible <host> -m file -a "path=/tmp/testdir state=directory mode=0755" --check
+## Self-Improvement
 
-# Test copy content
-ansible <host> -m copy -a "content='hello world' dest=/tmp/test.txt" --check
+teach {
+  // Record patterns that work for future sessions
+  
+  pattern(name, trigger, actions) {
+    when trigger matches:
+      execute actions
+      if successful: reinforce pattern
+      if failed: adjust or deprecate
+  }
+  
+  // Example learned patterns
+  patterns: [
+    pattern("yaml-indent-fix", /indentation error/, [
+      "Check for mixed tabs/spaces",
+      "Ensure 2-space indentation",
+      "Verify list item alignment"
+    ]),
+    
+    pattern("connectivity-debug", /unreachable/, [
+      "verify.ping(host)",
+      "ssh -v user@host",
+      "check ansible_host in inventory"
+    ])
+  ]
+}
 
-# Test stat (check file exists)
-ansible <host> -m stat -a "path=/etc/hosts"
+## Context Awareness
 
-# Test command execution
-ansible <host> -m command -a "uname -a"
+context {
+  // What the agent should track and use for decisions
+  
+  recentCommands: [] // Last N commands run
+  recentErrors: []   // Last N errors encountered
+  currentFocus: null // What host/role/playbook we're working on
+  userPreferences: {
+    verbosity: "normal",    // normal | verbose | quiet
+    confirmLevel: "changes" // always | changes | never
+  }
+  
+  // Use context in decisions
+  infer nextAction from {
+    currentFocus,
+    recentCommands,
+    state.lastError,
+    userIntent
+  }
+}
 
-# Test gathering specific facts
-ansible <host> -m setup -a "filter=ansible_os_family"
-```
+## Documentation Reference
 
-### Verify State After Playbook Runs
+Docs {
+  "Project structure": "ARCHITECTURE.md",
+  "Role documentation": "roles/*/README.md", 
+  "Common issues": "TROUBLESHOOTING.md",
+  "Current plan": "PLAN.md",
+  "Working notes": "SCRATCHPAD.md",
+  "Change history": "CHANGELOG.md"
+}
 
-Replace `<host>` with an actual host from your inventory (e.g., `localhost`).
+// Import troubleshooting patterns for intelligent error handling
+import TroubleshootingEngine from "TROUBLESHOOTING.md"
 
-| Verify...              | Command                                                      |
-| ---------------------- | ------------------------------------------------------------ |
-| File exists            | `ansible <host> -m stat -a "path=/etc/hosts"`                |
-| File content           | `ansible <host> -m slurp -a "src=/etc/hosts"` (base64)       |
-| Directory exists       | `ansible <host> -m stat -a "path=/tmp"`                      |
-| User exists            | `ansible <host> -m getent -a "database=passwd key=root"`     |
-| Command output         | `ansible <host> -m command -a "uname -a"`                    |
-| Environment            | `ansible <host> -m shell -a "env"`                           |
-| Disk space             | `ansible <host> -m shell -a "df -h"`                         |
-| Package installed      | `ansible <host> -m package_facts` then check output          |
-| Service running        | `ansible <host> -m service_facts` then check output          |
-| Port listening         | `ansible <host> -m wait_for -a "port=22 timeout=5"`          |
-| HTTP response          | `ansible <host> -m uri -a "url=http://example.com"`          |
-
-### Troubleshoot Failed Tasks
-
-When a playbook task fails, reproduce it ad-hoc with verbose output:
-
-```bash
-# Run the exact module with -vvv to see what's happening
-ansible <host> -m command -a "uname -a" -vvv
-
-# Check preconditions
-ansible <host> -m setup -a "filter=ansible_os_family"  # Right OS?
-ansible <host> -m command -a "whoami"                   # Right user?
-
-# Check if resource already exists
-ansible <host> -m stat -a "path=/tmp"
-
-# Check disk space (common failure cause)
-ansible <host> -m shell -a "df -h"
-
-# Check network (for downloads/API calls)
-ansible <host> -m uri -a "url=https://example.com"
-```
-
-## Starter Examples
-
-Common patterns for exploration and execution:
-
-```bash
-# Ad-hoc commands - quick inspection
-ansible all -m ping                              # Test connectivity
-ansible all -m setup -a 'filter=ansible_fqdn'   # Get hostnames
-ansible all -m shell -a 'uptime'                # Check uptime
-ansible all -m command -a 'whoami'              # Verify user
-
-# Playbook inspection - before running
-ansible-playbook <playbook>.yml --list-hosts   # What hosts?
-ansible-playbook <playbook>.yml --list-tasks   # What tasks?
-ansible-playbook <playbook>.yml --check --diff # Dry run
-
-# Playbook execution - graduated approach
-ansible-playbook <playbook>.yml --limit <host> --check  # Dry run one host
-ansible-playbook <playbook>.yml --limit <host>          # Apply one host
-ansible-playbook <playbook>.yml                         # Apply all
-
-# Targeted execution with tags
-ansible-playbook <playbook>.yml --tags <tag>        # Only tagged tasks
-ansible-playbook <playbook>.yml --skip-tags <tag>   # Skip tagged tasks
-
-# Verbose output for debugging
-ansible-playbook <playbook>.yml -v                    # Verbose
-ansible-playbook <playbook>.yml -vvv                  # Very verbose
-```
-
-## Commands
-
-| Task                 | Command                                          |
-| -------------------- | ------------------------------------------------ |
-| List inventory       | `ansible-inventory --list`                       |
-| Graph inventory      | `ansible-inventory --graph`                      |
-| Ping all hosts       | `ansible all -m ping`                            |
-| **Lint playbooks**   | `ansible-lint playbooks/`                        |
-| Syntax check         | `ansible-playbook <playbook>.yml --syntax-check` |
-| Run playbook (check) | `ansible-playbook <playbook>.yml --check --diff` |
-| Run playbook         | `ansible-playbook <playbook>.yml`                |
-| Run with limit       | `ansible-playbook <playbook>.yml --limit <host>` |
-| Run with tags        | `ansible-playbook <playbook>.yml --tags <tag>`   |
-| Gather facts         | `ansible <host> -m setup`                        |
-| Ad-hoc command       | `ansible <host> -m shell -a '<command>'`         |
-| Encrypt secret       | `ansible-vault encrypt_string '<value>'`         |
-| Edit vault file      | `ansible-vault edit <file>`                      |
-
-## Debugging
-
-When playbooks fail or behave unexpectedly:
-
-```bash
-# Lint first - catches most issues
-ansible-lint playbooks/
-
-# Syntax check
-ansible-playbook <playbook>.yml --syntax-check
-
-# Check what hosts would be targeted
-ansible-playbook <playbook>.yml --list-hosts
-
-# Dry run with diff to see what would change
-ansible-playbook <playbook>.yml --check --diff
-
-# Verbose output to see what's happening
-ansible-playbook <playbook>.yml -vvv
-
-# Start at a specific task (after failure)
-ansible-playbook <playbook>.yml --start-at-task="<task name>"
-
-# Step through tasks one at a time
-ansible-playbook <playbook>.yml --step
-
-# Debug a specific variable
-ansible <host> -m debug -a "var=hostvars[inventory_hostname]"
-
-# Check if a file exists
-ansible <host> -m stat -a "path=/etc/hosts"
-```
-
-### Debug Variables
-
-When a variable isn't what you expect:
-
-```bash
-# See all variables for a host (merged from all sources)
-ansible-inventory --host <hostname>
-
-# Check a specific variable's value
-ansible <host> -m debug -a "var=ansible_user"
-
-# See where variables might come from
-ls inventory/group_vars/    # Group variables
-ls inventory/host_vars/     # Host-specific overrides
-cat roles/<role>/defaults/main.yml  # Role defaults
-
-# Dump all hostvars (verbose - includes ansible facts)
-ansible <host> -m debug -a "var=hostvars[inventory_hostname]"
-
-# Check if variable is defined
-ansible <host> -m debug -a "msg={{ my_var | default('UNDEFINED') }}"
-```
-
-## Documentation
-
-**Use docs for "how/why" questions, not "what exists":**
-
-| Need                              | Doc                |
-| --------------------------------- | ------------------ |
-| Project structure and conventions | ARCHITECTURE.md    |
-| Role documentation                | roles/\*/README.md |
-| Common issues and solutions       | TROUBLESHOOTING.md |
+WhenStuck {
+  1. Check TROUBLESHOOTING.md for known issues
+  2. Run debug.checklist(playbook)
+  3. Examine state.lastError with pattern matching
+  4. Ask user for guidance with specific question
+}

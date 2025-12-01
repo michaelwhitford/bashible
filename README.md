@@ -85,7 +85,7 @@ If you don't have a remote server, you can remove `your-server` from the invento
 
 > **AI agents start here → `AGENTS.md`**
 >
-> The shell is your primary tool. Use it to discover what exists at runtime—don't just read files to understand the infrastructure. AGENTS.md provides the setup and discovery commands.
+> The shell is your primary tool. Use it to discover what exists at runtime—don't just read files to understand the infrastructure. AGENTS.md provides setup, discovery commands, and autonomous behaviors in SudoLang format.
 
 ## Project Structure
 
@@ -130,12 +130,12 @@ bashible/
 
 ## Documentation for AI Agents
 
-| File                 | Purpose                                          |
-| -------------------- | ------------------------------------------------ |
-| `AGENTS.md`          | **Start here** — Shell setup, discovery commands |
-| `ARCHITECTURE.md`    | System overview and conventions                  |
-| `TROUBLESHOOTING.md` | Error diagnosis and fixes                        |
-| `roles/*/README.md`  | Role-specific documentation                      |
+| File                 | Purpose                                                         |
+| -------------------- | --------------------------------------------------------------- |
+| `AGENTS.md`          | **Start here** — SudoLang format with autonomous behaviors      |
+| `ARCHITECTURE.md`    | System overview and conventions                                 |
+| `TROUBLESHOOTING.md` | Error diagnosis — SudoLang pattern matching diagnostics         |
+| `roles/*/README.md`  | Role-specific documentation                                     |
 
 ## Development
 
