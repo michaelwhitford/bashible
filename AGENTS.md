@@ -10,9 +10,12 @@ Planning: PLAN.md | Changes: CHANGELOG.md | Scratchpad: SCRATCHPAD.md
 source .venv/bin/activate    # Activate ansible environment
 ansible-inventory --graph    # See what hosts exist
 ansible all -m ping          # Test connectivity
+ansible-lint playbooks/      # Check for issues
 ```
 
 No `.venv`? Run `./install_ansible` first.
+
+**Workflow:** Role → Playbook → Lint → Check → Apply → Verify (see [Development Workflow](#development-workflow))
 
 ## Using SCRATCHPAD.md
 
@@ -45,6 +48,98 @@ The shell is how you think. Each command builds understanding of the infrastruct
 - Gather facts. Let Ansible tell you about the system.
 - Small plays. One logical change per play when possible.
 
+## Development Workflow
+
+**This is the core workflow. Follow it every time.**
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│  1. ROLE          Write a laser-focused role (one concern)      │
+│         ↓                                                       │
+│  2. PLAYBOOK      Compose roles into a playbook                 │
+│         ↓                                                       │
+│  3. LINT          Run ansible-lint until it passes              │
+│         ↓                                                       │
+│  4. CHECK         Dry-run with --check --diff                   │
+│         ↓                                                       │
+│  5. APPLY         Run on one host, then expand                  │
+│         ↓                                                       │
+│  6. VERIFY        Confirm state with ad-hoc commands            │
+└─────────────────────────────────────────────────────────────────┘
+```
+
+### 1. Write Laser-Focused Roles
+
+Each role should do **one thing well**. If you're tempted to name it `server_setup`, break it down.
+
+```
+roles/
+├── nginx/          # Just nginx installation and config
+├── certbot/        # Just SSL certificate management  
+├── app_deploy/     # Just application deployment
+└── monitoring/     # Just monitoring agent setup
+```
+
+Create a new role:
+```bash
+mkdir -p roles/<role_name>/{tasks,defaults,handlers,templates}
+touch roles/<role_name>/tasks/main.yml
+touch roles/<role_name>/defaults/main.yml
+```
+
+### 2. Compose Roles into Playbooks
+
+Playbooks orchestrate roles. Keep playbooks thin—logic lives in roles.
+
+```yaml
+# playbooks/webservers.yml
+---
+- name: Configure web servers
+  hosts: webservers
+  roles:
+    - common
+    - nginx
+    - certbot
+    - app_deploy
+```
+
+### 3. Lint Until Clean
+
+**Do not proceed until linting passes.** This catches most issues before they hit production.
+
+```bash
+# Lint the playbook and all roles it uses
+ansible-lint playbooks/webservers.yml
+
+# Fix issues, then re-lint
+ansible-lint playbooks/webservers.yml
+```
+
+Common fixes:
+- Use FQCN: `ansible.builtin.copy` not `copy`
+- Use `true`/`false` not `yes`/`no`
+- Add `name:` to every task
+- Use `changed_when`/`failed_when` for shell tasks
+
+### 4–6. Check, Apply, Verify
+
+Once lint passes, follow the graduated execution:
+
+```bash
+# 4. Dry-run to see what would change
+ansible-playbook playbooks/webservers.yml --check --diff
+
+# 5. Apply to ONE host first
+ansible-playbook playbooks/webservers.yml --limit web1
+
+# 5b. Then expand to all
+ansible-playbook playbooks/webservers.yml
+
+# 6. Verify the result
+ansible webservers -m uri -a "url=http://localhost"
+ansible webservers -m shell -a "systemctl status nginx"
+```
+
 ## Shell Setup (Do This First)
 
 ```bash
@@ -62,6 +157,9 @@ ansible-inventory --list
 
 # Test connectivity to hosts
 ansible all -m ping
+
+# Lint playbooks for issues
+ansible-lint playbooks/
 
 # Verify you're in the right directory
 pwd && ls -la
@@ -113,6 +211,25 @@ In examples below, `<host>` means a host or group from inventory. Run `ansible-i
 | Check memory?             | `ansible <host> -m shell -a 'free -h'`                             |
 | What's listening?         | `ansible <host> -m shell -a 'ss -tlnp'`                            |
 | Environment variables?    | `ansible <host> -m shell -a 'env'`                                 |
+
+### Discover Variables
+
+Variables control host behavior. Ansible merges them from multiple sources.
+
+| Question                      | Command                                            |
+| ----------------------------- | -------------------------------------------------- |
+| All vars for a host?          | `ansible-inventory --host <hostname>`              |
+| What group_vars files exist?  | `ls inventory/group_vars/`                         |
+| What host_vars files exist?   | `ls inventory/host_vars/`                          |
+| Role default variables?       | `cat roles/<role>/defaults/main.yml`               |
+| Debug a specific variable?    | `ansible <host> -m debug -a "var=<varname>"`       |
+| All hostvars (verbose)?       | `ansible <host> -m debug -a "var=hostvars[inventory_hostname]"` |
+
+**Variable precedence** (lowest to highest):
+1. Role defaults → 2. group_vars/all → 3. group_vars/\<group\> → 4. host_vars/\<host\> → 5. Play vars → 6. `-e` extra vars
+
+To override a variable for one host, create `inventory/host_vars/<hostname>.yml`.
+To override for a group, create `inventory/group_vars/<groupname>.yml`.
 
 ## Exploration Pattern
 
@@ -243,6 +360,8 @@ ansible-playbook <playbook>.yml -vvv                  # Very verbose
 | List inventory       | `ansible-inventory --list`                       |
 | Graph inventory      | `ansible-inventory --graph`                      |
 | Ping all hosts       | `ansible all -m ping`                            |
+| **Lint playbooks**   | `ansible-lint playbooks/`                        |
+| Syntax check         | `ansible-playbook <playbook>.yml --syntax-check` |
 | Run playbook (check) | `ansible-playbook <playbook>.yml --check --diff` |
 | Run playbook         | `ansible-playbook <playbook>.yml`                |
 | Run with limit       | `ansible-playbook <playbook>.yml --limit <host>` |
@@ -251,15 +370,16 @@ ansible-playbook <playbook>.yml -vvv                  # Very verbose
 | Ad-hoc command       | `ansible <host> -m shell -a '<command>'`         |
 | Encrypt secret       | `ansible-vault encrypt_string '<value>'`         |
 | Edit vault file      | `ansible-vault edit <file>`                      |
-| Syntax check         | `ansible-playbook <playbook>.yml --syntax-check` |
-| Lint playbook        | `ansible-lint <playbook>.yml`                    |
 
 ## Debugging
 
 When playbooks fail or behave unexpectedly:
 
 ```bash
-# Syntax check first
+# Lint first - catches most issues
+ansible-lint playbooks/
+
+# Syntax check
 ansible-playbook <playbook>.yml --syntax-check
 
 # Check what hosts would be targeted
@@ -282,6 +402,29 @@ ansible <host> -m debug -a "var=hostvars[inventory_hostname]"
 
 # Check if a file exists
 ansible <host> -m stat -a "path=/etc/hosts"
+```
+
+### Debug Variables
+
+When a variable isn't what you expect:
+
+```bash
+# See all variables for a host (merged from all sources)
+ansible-inventory --host <hostname>
+
+# Check a specific variable's value
+ansible <host> -m debug -a "var=ansible_user"
+
+# See where variables might come from
+ls inventory/group_vars/    # Group variables
+ls inventory/host_vars/     # Host-specific overrides
+cat roles/<role>/defaults/main.yml  # Role defaults
+
+# Dump all hostvars (verbose - includes ansible facts)
+ansible <host> -m debug -a "var=hostvars[inventory_hostname]"
+
+# Check if variable is defined
+ansible <host> -m debug -a "msg={{ my_var | default('UNDEFINED') }}"
 ```
 
 ## Documentation

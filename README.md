@@ -57,6 +57,29 @@ Alternatively, use the wrapper script without activating:
 ./ansible.sh ansible-playbook playbooks/site.yml --check
 ```
 
+## Adding a Remote Server
+
+The inventory includes a placeholder host (`your-server`) to demonstrate group management. To use it:
+
+1. **Edit the inventory** — Update `inventory/hosts.yml`:
+   ```yaml
+   your-server:
+     ansible_host: 192.168.1.100  # Replace with real IP or hostname
+     ansible_user: deploy          # SSH user (optional)
+   ```
+
+2. **Ensure SSH access** — You should be able to run:
+   ```bash
+   ssh deploy@192.168.1.100
+   ```
+
+3. **Test connectivity**:
+   ```bash
+   ansible your-server -m ping
+   ```
+
+If you don't have a remote server, you can remove `your-server` from the inventory and work with `localhost` only.
+
 > **AI agents start here → `AGENTS.md`**
 >
 > The shell is your primary tool. Use it to discover what exists at runtime—don't just read files to understand the infrastructure. AGENTS.md provides the setup and discovery commands.
@@ -132,4 +155,4 @@ ansible-playbook site.yml -vvv
 
 ## License
 
-MIT License
+MIT License (c) Michael Whitford

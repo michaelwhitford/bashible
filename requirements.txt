@@ -2,5 +2,5 @@
 # Install with: pip install -r requirements.txt
 
 ansible>=8.0
-ansible-lint>=6.0
+ansible-dev-tools>=25.0  # Includes ansible-lint, molecule, navigator, etc.
 jmespath  # For json_query filter

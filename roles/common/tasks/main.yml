@@ -5,16 +5,16 @@
 
 ---
 - name: Gather facts
-  setup:
+  ansible.builtin.setup:
   tags: [common, facts]
 
 - name: Display OS information
-  debug:
+  ansible.builtin.debug:
     msg: "{{ ansible_facts['distribution'] }} {{ ansible_facts['distribution_version'] }}"
   tags: [common, info]
 
 - name: Display system summary
-  debug:
+  ansible.builtin.debug:
     msg: |
       Hostname: {{ ansible_facts['fqdn'] }}
       OS: {{ ansible_facts['distribution'] }} {{ ansible_facts['distribution_version'] }}
@@ -27,7 +27,7 @@
 # Examples:
 #
 # - name: Ensure common packages are installed
-#   package:
+#   ansible.builtin.package:
 #     name:
 #       - curl
 #       - vim
@@ -36,8 +36,8 @@
 #   tags: [common, packages]
 #
 # - name: Ensure time synchronization is configured
-#   service:
+#   ansible.builtin.service:
 #     name: chronyd
 #     state: started
-#     enabled: yes
+#     enabled: true
 #   tags: [common, time]

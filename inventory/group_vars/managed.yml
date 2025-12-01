@@ -1,0 +1,19 @@
+# Variables for the 'managed' group
+# Apply to all hosts in the managed group (localhost + elvira)
+#
+# Discovery:
+#   ansible-inventory --graph managed     # See hosts in this group
+#   ansible managed -m ping               # Test all hosts in group
+#   ansible managed -m debug -a "var=managed_env"  # Check this variable
+#
+# This demonstrates how group_vars work:
+#   - All hosts in 'managed' group share these variables
+#   - Override per-host in host_vars/<hostname>.yml
+
+---
+# Environment identifier for managed hosts
+managed_env: production
+
+# Example: common settings for all managed hosts
+# managed_ntp_server: time.example.com
+# managed_log_level: info

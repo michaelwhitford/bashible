@@ -1,0 +1,20 @@
+# Host-specific variables for localhost
+# These override group_vars for this host only
+#
+# Discovery:
+#   ansible-inventory --host localhost    # See merged variables
+#   ls inventory/host_vars/               # See all host_vars files
+#
+# Variable precedence (highest wins):
+#   1. Extra vars (-e on command line)
+#   2. host_vars/<hostname>.yml  <-- YOU ARE HERE
+#   3. group_vars/<group>.yml
+#   4. group_vars/all.yml
+#   5. Role defaults
+
+---
+# Example overrides:
+# common_timezone: America/New_York    # Override group default
+# custom_packages:                      # Host-specific packages
+#   - htop
+#   - tmux
