@@ -1,8 +1,19 @@
 # Handlers for common role
 # These are triggered by tasks using 'notify'
+#
+# Usage in tasks:
+#   - name: Update chrony config
+#     template:
+#       src: chrony.conf.j2
+#       dest: /etc/chrony.conf
+#     notify: Restart chronyd    # <-- triggers handler below
+#
+# Handler runs once at end of play, even if notified multiple times.
+# Force immediate execution with: - meta: flush_handlers
 
 ---
 # - name: Restart chronyd
-#   service:
+#   ansible.builtin.service:
 #     name: chronyd
 #     state: restarted
+#   tags: [common, time]

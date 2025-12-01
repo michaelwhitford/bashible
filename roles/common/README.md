@@ -36,15 +36,16 @@ None
 ## Tags
 
 - `common` - All tasks in this role
-- `common:facts` - Fact gathering only
-- `common:packages` - Package installation only
+- `facts` - Fact gathering only
+- `info` - OS and system information display
+- `summary` - System summary display
 
 ## Discovery
 
 ```bash
 # See what this role would do
-ansible-playbook playbooks/site.yml --list-tasks --tags common
+./wrap-venv ansible-playbook playbooks/site.yml --list-tasks --tags common
 
 # Dry run
-ansible-playbook playbooks/site.yml --tags common --check --diff
+./wrap-venv ansible-playbook playbooks/site.yml --tags common --check --diff
 ```

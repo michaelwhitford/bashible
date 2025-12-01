@@ -2,9 +2,9 @@
 # Apply to all hosts in the [local] group (currently: localhost)
 #
 # Discovery:
-#   ansible-inventory --graph local       # See hosts in this group
-#   ansible-inventory --host localhost    # See merged variables
-#   ls inventory/group_vars/              # See all group_vars files
+#   ./wrap-venv ansible-inventory --graph local       # See hosts in this group
+#   ./wrap-venv ansible-inventory --host localhost    # See merged variables
+#   ls inventory/group_vars/                           # See all group_vars files
 #
 # Variable precedence:
 #   - group_vars/all.yml applies to ALL hosts

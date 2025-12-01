@@ -226,9 +226,9 @@ match error {
     match cause {
       "interactive command" => {
         problem: "Commands needing stdin will hang"
-        wrong: "shell: apt upgrade"
+        wrong: "ansible.builtin.shell: apt upgrade"
         right: |
-          apt:
+          ansible.builtin.apt:
             upgrade: yes
       }
       
@@ -236,7 +236,7 @@ match error {
         solution: "Use async"
         example: |
           - name: Long running task
-            command: /path/to/slow/script
+            ansible.builtin.command: /path/to/slow/script
             async: 3600    # Max seconds
             poll: 30       # Check interval
       }
@@ -402,12 +402,12 @@ match error {
         example: |
           # In tasks
           - name: Update config
-            template: ...
+            ansible.builtin.template: ...
             notify: Restart nginx    # Must match exactly
           
           # In handlers  
           - name: Restart nginx      # Case sensitive!
-            service: ...
+            ansible.builtin.service: ...
       },
       {
         name: "Task didn't report changed"
@@ -417,7 +417,7 @@ match error {
       {
         name: "Need immediate handler execution"
         solution: |
-          - meta: flush_handlers    # Force handlers to run now
+          - ansible.builtin.meta: flush_handlers    # Force handlers to run now
       }
     ]
   }
@@ -494,11 +494,11 @@ debug {
   
   // Print variables in playbook
   printVar(varname) => |
-    - debug:
+    - ansible.builtin.debug:
         var: $varname
   
   printMsg(template) => |
-    - debug:
+    - ansible.builtin.debug:
         msg: "$template"
   
   // Command-line debugging
@@ -521,10 +521,10 @@ debug {
   // Register and inspect pattern
   registerPattern() => |
     - name: Run command
-      command: $cmd
+      ansible.builtin.command: $cmd
       register: result
     
-    - debug:
+    - ansible.builtin.debug:
         var: result
 }
 

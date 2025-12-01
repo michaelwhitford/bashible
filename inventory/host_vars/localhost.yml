@@ -2,8 +2,8 @@
 # These override group_vars for this host only
 #
 # Discovery:
-#   ansible-inventory --host localhost    # See merged variables
-#   ls inventory/host_vars/               # See all host_vars files
+#   ./wrap-venv ansible-inventory --host localhost    # See merged variables
+#   ls inventory/host_vars/                            # See all host_vars files
 #
 # Variable precedence (highest wins):
 #   1. Extra vars (-e on command line)

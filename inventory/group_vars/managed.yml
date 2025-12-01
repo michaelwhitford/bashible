@@ -1,10 +1,10 @@
 # Variables for the 'managed' group
-# Apply to all hosts in the managed group (localhost + elvira)
+# Apply to all hosts in the managed group (localhost + server)
 #
 # Discovery:
-#   ansible-inventory --graph managed     # See hosts in this group
-#   ansible managed -m ping               # Test all hosts in group
-#   ansible managed -m debug -a "var=managed_env"  # Check this variable
+#   ./wrap-venv ansible-inventory --graph managed     # See hosts in this group
+#   ./wrap-venv ansible managed -m ping               # Test all hosts in group
+#   ./wrap-venv ansible managed -m debug -a "var=managed_env"  # Check this variable
 #
 # This demonstrates how group_vars work:
 #   - All hosts in 'managed' group share these variables

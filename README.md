@@ -28,7 +28,10 @@ This project works with **any AI agent that has access to a bash tool**. Example
 - **Python 3.9+** — Required for Ansible
 - **Bash** — For shell commands and the install script
 
-The `./install_ansible` script creates a `.venv` directory with Ansible installed, keeping dependencies isolated from your system Python.
+The `./install-ansible.sh` script creates a `.venv` directory with Ansible installed, keeping dependencies isolated from your system Python. It installs:
+- `ansible-core` — The core Ansible runtime
+- `ansible-lint` — Playbook linting tool
+- Required Python dependencies
 
 The essential capability: **live shell execution**. This lets the AI agent inspect infrastructure state, run ad-hoc commands, test playbooks incrementally, and verify changes work before committing.
 
@@ -36,26 +39,16 @@ The essential capability: **live shell execution**. This lets the AI agent inspe
 
 ```bash
 # One-time setup (creates .venv with ansible)
-./install_ansible
-
-# Activate the environment
-source .venv/bin/activate
+./install-ansible.sh
 
 # Check inventory
-ansible-inventory --graph
+./wrap-venv ansible-inventory --graph
 
 # Test connectivity
-ansible all -m ping
+./wrap-venv ansible all -m ping
 
 # Dry-run the site playbook
-ansible-playbook playbooks/site.yml --check --diff
-```
-
-Alternatively, use the wrapper script without activating:
-
-```bash
-./ansible.sh ansible-inventory --graph
-./ansible.sh ansible-playbook playbooks/site.yml --check
+./wrap-venv ansible-playbook playbooks/site.yml --check --diff
 ```
 
 ## Adding a Remote Server
@@ -78,21 +71,24 @@ To add a remote server to the inventory:
 
 3. **Test connectivity**:
    ```bash
-   ansible myserver -m ping
+   ./wrap-venv ansible myserver -m ping
    ```
 
 > **AI agents start here → `AGENTS.md`**
 >
 > The shell is your primary tool. Use it to discover what exists at runtime—don't just read files to understand the infrastructure. AGENTS.md provides setup, discovery commands, and autonomous behaviors in SudoLang format.
 
+> **Note:** The inventory includes a placeholder remote host (`server`) which requires configuration before use. Start with `localhost` for initial exploration—it's always available.
+
 ## Project Structure
 
 ```
 bashible/
 ├── AGENTS.md              # AI agent guide (start here)
-├── README.md              # This file
-├── ARCHITECTURE.md        # System design and conventions
+├── ANSIBLE.md             # Ansible concepts & discovery
+├── ARCHITECTURE.md        # Project design & decisions
 ├── TROUBLESHOOTING.md     # Common issues and solutions
+├── README.md              # This file
 ├── ansible.cfg            # Ansible configuration
 ├── inventory/             # Host and group definitions
 │   ├── hosts.yml          # Inventory file
@@ -130,28 +126,30 @@ bashible/
 
 | File                 | Purpose                                                         |
 | -------------------- | --------------------------------------------------------------- |
-| `AGENTS.md`          | **Start here** — SudoLang format with autonomous behaviors      |
-| `ARCHITECTURE.md`    | System overview and conventions                                 |
-| `TROUBLESHOOTING.md` | Error diagnosis — SudoLang pattern matching diagnostics         |
+| `AGENTS.md`          | **Start here** — Quick start, constraints, pointers             |
+| `ANSIBLE.md`         | Ansible concepts, commands, discovery patterns                  |
+| `ARCHITECTURE.md`    | Project structure and design decisions                          |
+| `WORKFLOWS.md`       | Step-by-step procedures for common tasks                        |
+| `TROUBLESHOOTING.md` | Error patterns and diagnostic sequences                         |
 | `roles/*/README.md`  | Role-specific documentation                                     |
 
 ## Development
 
 ```bash
 # Syntax check
-ansible-playbook site.yml --syntax-check
+./wrap-venv ansible-playbook playbooks/site.yml --syntax-check
 
 # Lint
-ansible-lint
+./wrap-venv ansible-lint
 
 # Dry run with diff
-ansible-playbook site.yml --check --diff
+./wrap-venv ansible-playbook playbooks/site.yml --check --diff
 
 # Run against one host first
-ansible-playbook site.yml --limit hostname
+./wrap-venv ansible-playbook playbooks/site.yml --limit hostname
 
 # Run with verbose output
-ansible-playbook site.yml -vvv
+./wrap-venv ansible-playbook playbooks/site.yml -vvv
 ```
 
 ## License

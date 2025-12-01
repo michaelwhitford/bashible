@@ -2,328 +2,193 @@
 
 ## Overview
 
-Bashible is an Ansible project structured for AI-agent collaboration. The design prioritizes discoverability—an AI with shell access can understand the infrastructure through commands, not just documentation.
+Bashible is an Ansible project structured for AI-agent collaboration. The design prioritizes:
 
-## Discover the Project
+- **Discoverability** — Shell commands reveal infrastructure state
+- **Layered separation** — Clear boundaries between inventory, roles, and playbooks
+- **Incremental operation** — Safe to explore and test before applying changes
 
-```bash
-# What's in this repo?
-ls -la
+## System Layers
 
-# What's the directory structure?
-find . -type f -name "*.yml" | head -20
-
-# What roles exist?
-ls roles/
-
-# What's in a role?
-ls -la roles/common/
-
-# What playbooks exist?
-ls playbooks/
 ```
-
-## Discover the Configuration
-
-```bash
-# What config is Ansible using?
-ansible --version                    # Shows config file path
-
-# What's in the config?
-cat ansible.cfg
-
-# Where does inventory come from?
-grep inventory ansible.cfg
-
-# What are the privilege settings?
-grep -A3 "\[privilege_escalation\]" ansible.cfg
+┌─────────────────────────────────────────────────────────┐
+│                    Playbooks                            │
+│            (Orchestration — what to do, in what order)  │
+├─────────────────────────────────────────────────────────┤
+│                      Roles                              │
+│            (Reusable units — how to do it)              │
+├─────────────────────────────────────────────────────────┤
+│                   Inventory                             │
+│            (Hosts + groups + variables — who and where) │
+├─────────────────────────────────────────────────────────┤
+│                  Ansible Core                           │
+│            (Modules, connections, execution engine)     │
+├─────────────────────────────────────────────────────────┤
+│                  Target Systems                         │
+│            (SSH to Linux/macOS, WinRM to Windows)       │
+└─────────────────────────────────────────────────────────┘
 ```
-
-## Discover the Infrastructure
-
-```bash
-# What hosts/groups exist?
-ansible-inventory --graph
-
-# What variables does a host have?
-ansible-inventory --host <hostname>
-
-# What's the current state of a host?
-ansible <host> -m setup
-
-# What would a playbook do?
-ansible-playbook playbooks/site.yml --list-tasks --list-hosts
-```
-
-See **AGENTS.md** for complete discovery patterns.
 
 ## Directory Structure
 
-Discover it yourself:
-```bash
-find . -type d -not -path './.venv/*' -not -path './.git/*' | head -20
+```
+bashible/
+├── AGENTS.md              # AI agent behaviors (SudoLang)
+├── ANSIBLE.md             # Ansible concepts & discovery
+├── ARCHITECTURE.md        # This file — project design
+├── TROUBLESHOOTING.md     # Error diagnosis patterns
+├── PLAN.md                # Current work objective
+├── SCRATCHPAD.md          # Session working notes
+├── CHANGELOG.md           # History of changes
+│
+├── ansible.cfg            # Ansible configuration
+├── ansible.sh             # Wrapper script (no venv activation needed)
+├── install-ansible.sh        # One-time setup script
+├── requirements.txt       # Python dependencies
+│
+├── inventory/             # WHO — hosts and their properties
+│   ├── hosts.yml          # Host and group definitions
+│   ├── group_vars/        # Variables by group
+│   │   ├── all.yml        # All hosts
+│   │   ├── local.yml      # Local group
+│   │   └── managed.yml    # Managed group
+│   └── host_vars/         # Variables by host
+│       └── localhost.yml
+│
+├── playbooks/             # WHAT — task orchestration
+│   └── site.yml           # Main entry point
+│
+├── roles/                 # HOW — reusable automation
+│   └── common/            # Baseline for all hosts
+│       ├── README.md
+│       ├── defaults/      # Default variable values
+│       ├── tasks/         # Task definitions
+│       ├── handlers/      # Event-triggered actions
+│       └── templates/     # Jinja2 templates
+│
+└── files/                 # Static files to deploy
 ```
 
-Standard Ansible layout:
-- `ansible.cfg` — Ansible settings (inventory path, defaults)
-- `inventory/` — Host and group definitions
-- `playbooks/` — Task orchestration
-- `roles/` — Reusable automation units
-- `files/` — Static files to deploy
+## Design Decisions
 
-## Configuration
+### Inventory Organization
 
-Discover it:
-```bash
-cat ansible.cfg
-```
+**Decision:** Single `hosts.yml` with group_vars/host_vars directories.
 
-### Variable Precedence (lowest to highest)
+**Rationale:** 
+- Simple for small-to-medium infrastructure
+- Variables separated from host definitions (easier to manage)
+- Clear precedence: all → group → host
 
-1. Role defaults (`roles/*/defaults/main.yml`)
-2. Inventory group_vars (`inventory/group_vars/*.yml`)
-3. Inventory host_vars (`inventory/host_vars/*.yml`)
-4. Play vars
-5. Role vars (`roles/*/vars/main.yml`)
-6. Task vars
-7. Extra vars (`-e` on command line) — **always wins**
+**Alternative:** Multiple inventory files per environment (`inventory/production/`, `inventory/staging/`). Use this when environments diverge significantly.
 
-## Conventions
+### Role Structure
 
-### Naming
+**Decision:** Minimal roles by default, expand as needed.
 
-- **Roles**: lowercase, underscores: `nginx_proxy`, `postgres_server`
-- **Variables**: lowercase, underscores, prefixed by role: `nginx_port`, `postgres_version`
-- **Tasks**: Start with verb: "Install packages", "Configure nginx", "Start service"
-- **Handlers**: Describe the action: "Restart nginx", "Reload systemd"
+**Rationale:**
+- Start with just `tasks/main.yml` and `README.md`
+- Add `defaults/`, `handlers/`, `templates/` when actually needed
+- Avoid empty boilerplate directories
 
-### Tags
+### Single Entry Point
 
-Every task should have tags for selective execution:
+**Decision:** `playbooks/site.yml` is the main entry point.
 
-```yaml
-- name: Install nginx
-  apt:
-    name: nginx
-  tags:
-    - nginx
-    - packages
-    - install
-```
+**Rationale:**
+- One command to configure everything: `ansible-playbook playbooks/site.yml`
+- Limit scope with `--limit` or `--tags`, not different playbooks
+- Predictable — operators know where to look
 
-Common tag categories:
-- **Component**: `nginx`, `postgres`, `docker`
-- **Action**: `install`, `configure`, `deploy`
-- **Phase**: `setup`, `update`, `cleanup`
+### Local Development First
 
-### Idempotency
+**Decision:** `localhost` is always in the inventory.
 
-All tasks must be idempotent (safe to run multiple times):
+**Rationale:**
+- Can test immediately without remote hosts
+- Validates playbook syntax and logic locally
+- macOS/Linux localhost works out of the box
 
-```yaml
-# Good - idempotent
-- name: Ensure nginx is installed
-  apt:
-    name: nginx
-    state: present
+## File Purposes
 
-# Bad - not idempotent
-- name: Add line to file
-  shell: echo "line" >> /etc/config
-```
+### Documentation Files
 
-Use modules instead of shell/command when possible. If shell is required, add `creates:` or `removes:` conditions.
+| File | Purpose | Update Frequency |
+|------|---------|------------------|
+| `AGENTS.md` | AI agent instructions & behaviors | Rarely (stable interface) |
+| `ANSIBLE.md` | Ansible concepts & discovery patterns | Rarely (reference) |
+| `ARCHITECTURE.md` | Project design & decisions | When structure changes |
+| `TROUBLESHOOTING.md` | Error patterns & fixes | When new issues arise |
+| `PLAN.md` | Current work objective | Before each task |
+| `SCRATCHPAD.md` | Session notes | During work |
+| `CHANGELOG.md` | History of changes | After each change |
 
-## Playbook Patterns
+### Configuration Files
 
-### Site Playbook (Main Entry Point)
+| File | Purpose |
+|------|---------|
+| `ansible.cfg` | Ansible settings (inventory path, defaults, SSH options) |
+| `requirements.txt` | Python packages (ansible-core, ansible-lint) |
 
-```yaml
-# site.yml - runs everything
----
-- import_playbook: playbooks/common.yml
-- import_playbook: playbooks/webservers.yml
-- import_playbook: playbooks/databases.yml
-```
+### Executable Files
 
-### Component Playbook
+| File | Purpose |
+|------|---------|
+| `install-ansible.sh` | Creates `.venv` with Ansible installed |
+| `wrap-venv` | Runs Ansible commands without manual venv activation |
 
-```yaml
-# playbooks/webservers.yml
----
-- name: Configure web servers
-  hosts: webservers
-  roles:
-    - common
-    - nginx
-    - app_deploy
-```
+## Extension Points
 
-### Utility Playbook (One-off tasks)
+### Adding a New Role
 
-For tasks that don't fit into roles—quick operational actions. Not to be confused with **ad-hoc commands** (single shell invocations like `ansible localhost -a 'whoami'`).
+1. Create `roles/<name>/tasks/main.yml`
+2. Add `roles/<name>/README.md` documenting purpose and variables
+3. Add `roles/<name>/defaults/main.yml` if role has configurable options
+4. Reference in playbook: `roles: [<name>]`
 
-```yaml
-# playbooks/utility/restart_services.yml
----
-- name: Restart all services
-  hosts: "{{ target_hosts | default('all') }}"
-  tasks:
-    - name: Restart nginx
-      service:
-        name: nginx
-        state: restarted
-      tags: [nginx]
-```
+### Adding a New Host
 
-## Role Patterns
+1. Add to `inventory/hosts.yml` under appropriate group
+2. Optionally create `inventory/host_vars/<hostname>.yml`
+3. Test: `ansible <hostname> -m ping`
 
-### Minimal Role Structure
+### Adding a New Group
 
-```
-roles/example/
-├── tasks/
-│   └── main.yml
-└── README.md
-```
+1. Add group under `all.children` in `inventory/hosts.yml`
+2. Create `inventory/group_vars/<groupname>.yml` for shared variables
+3. Reference in playbooks: `hosts: <groupname>`
 
-### Full Role Structure
+### Adding a New Playbook
 
-```
-roles/nginx/
-├── README.md           # Document role purpose, variables, dependencies
-├── defaults/
-│   └── main.yml        # Default variable values
-├── tasks/
-│   ├── main.yml        # Entry point, includes others
-│   ├── install.yml     # Package installation
-│   ├── configure.yml   # Configuration files
-│   └── service.yml     # Service management
-├── handlers/
-│   └── main.yml        # Restart/reload handlers
-├── templates/
-│   └── nginx.conf.j2   # Configuration templates
-├── files/              # Static files
-└── vars/
-    └── main.yml        # Variables (not overridable)
-```
+1. Create `playbooks/<name>.yml`
+2. Either import into `site.yml` or run standalone
+3. Document in `CHANGELOG.md`
 
-### Role README Template
+## Security Considerations
 
-```markdown
-# Role: nginx
+### SSH Access
 
-Installs and configures nginx web server.
+- Key-based authentication preferred over passwords
+- `ansible_user` should be a dedicated deploy user, not root
+- Use `become: true` for privilege escalation (not root login)
 
-## Requirements
+### Secrets
 
-- Debian/Ubuntu or RHEL/CentOS
-- Port 80/443 available
+- Never commit plaintext secrets
+- Use `ansible-vault` for encrypted variables
+- Store vault password outside the repository
 
-## Role Variables
+### Execution Safety
 
-| Variable | Default | Description |
-|----------|---------|-------------|
-| nginx_port | 80 | HTTP listen port |
-| nginx_worker_processes | auto | Worker process count |
+- Always `--check --diff` before applying changes
+- Limit scope with `--limit` when testing
+- Review changes in `CHANGELOG.md`
 
-## Dependencies
+## Related Documentation
 
-- common
-
-## Example Playbook
-
-    - hosts: webservers
-      roles:
-        - nginx
-
-## Tags
-
-- nginx
-- nginx:install
-- nginx:configure
-```
-
-## Inventory Patterns
-
-### Static Inventory
-
-```yaml
-# inventory/hosts.yml
-all:
-  children:
-    webservers:
-      hosts:
-        web1:
-          ansible_host: 192.168.1.10
-        web2:
-          ansible_host: 192.168.1.11
-    databases:
-      hosts:
-        db1:
-          ansible_host: 192.168.1.20
-```
-
-### Group Variables
-
-```yaml
-# inventory/group_vars/webservers.yml
-nginx_port: 80
-nginx_worker_processes: 4
-app_environment: production
-```
-
-### Host Variables
-
-```yaml
-# inventory/host_vars/web1.yml
-nginx_worker_processes: 8  # Override for this host
-```
-
-## Secrets Management
-
-Use ansible-vault for sensitive data:
-
-```bash
-# Encrypt a file
-ansible-vault encrypt inventory/group_vars/production/vault.yml
-
-# Encrypt a string for inline use
-ansible-vault encrypt_string 'secret_password' --name 'db_password'
-
-# Edit encrypted file
-ansible-vault edit inventory/group_vars/production/vault.yml
-
-# Run playbook with vault password
-ansible-playbook playbooks/site.yml --ask-vault-pass
-# Or with password file
-ansible-playbook playbooks/site.yml --vault-password-file ~/.vault_pass
-```
-
-Convention: Store encrypted variables in files named `vault.yml` alongside regular variables.
-
-## Testing Approach
-
-### Graduated Execution
-
-1. **Syntax check**: `ansible-playbook playbooks/site.yml --syntax-check`
-2. **Lint**: `ansible-lint playbooks/site.yml`
-3. **Dry run**: `ansible-playbook playbooks/site.yml --check --diff`
-4. **Single host**: `ansible-playbook playbooks/site.yml --limit host1`
-5. **Single group**: `ansible-playbook playbooks/site.yml --limit groupname`
-6. **Full run**: `ansible-playbook playbooks/site.yml`
-
-When errors occur, see **TROUBLESHOOTING.md** for diagnostic patterns and recovery strategies.
-
-### Validation Tasks
-
-Include validation in playbooks:
-
-```yaml
-- name: Verify nginx is running
-  uri:
-    url: "http://localhost:{{ nginx_port }}"
-    status_code: 200
-  retries: 3
-  delay: 5
-```
+| Document | Focus |
+|----------|-------|
+| `AGENTS.md` | AI agent behaviors and workflows |
+| `ANSIBLE.md` | Ansible concepts and self-discovery |
+| `TROUBLESHOOTING.md` | Error diagnosis and recovery |
+| `roles/*/README.md` | Role-specific documentation |
