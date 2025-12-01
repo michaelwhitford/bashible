@@ -295,9 +295,9 @@ ansible-vault encrypt_string 'secret_password' --name 'db_password'
 ansible-vault edit inventory/group_vars/production/vault.yml
 
 # Run playbook with vault password
-ansible-playbook site.yml --ask-vault-pass
+ansible-playbook playbooks/site.yml --ask-vault-pass
 # Or with password file
-ansible-playbook site.yml --vault-password-file ~/.vault_pass
+ansible-playbook playbooks/site.yml --vault-password-file ~/.vault_pass
 ```
 
 Convention: Store encrypted variables in files named `vault.yml` alongside regular variables.
@@ -306,12 +306,14 @@ Convention: Store encrypted variables in files named `vault.yml` alongside regul
 
 ### Graduated Execution
 
-1. **Syntax check**: `ansible-playbook site.yml --syntax-check`
-2. **Lint**: `ansible-lint site.yml`
-3. **Dry run**: `ansible-playbook site.yml --check --diff`
-4. **Single host**: `ansible-playbook site.yml --limit host1`
-5. **Single group**: `ansible-playbook site.yml --limit groupname`
-6. **Full run**: `ansible-playbook site.yml`
+1. **Syntax check**: `ansible-playbook playbooks/site.yml --syntax-check`
+2. **Lint**: `ansible-lint playbooks/site.yml`
+3. **Dry run**: `ansible-playbook playbooks/site.yml --check --diff`
+4. **Single host**: `ansible-playbook playbooks/site.yml --limit host1`
+5. **Single group**: `ansible-playbook playbooks/site.yml --limit groupname`
+6. **Full run**: `ansible-playbook playbooks/site.yml`
+
+When errors occur, see **TROUBLESHOOTING.md** for diagnostic patterns and recovery strategies.
 
 ### Validation Tasks
 

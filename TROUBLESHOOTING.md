@@ -272,6 +272,40 @@ match error {
       userIntent
     }
   }
+  
+  /host appears multiple times/i | "duplicate host" => HostInMultipleGroups {
+    
+    // This is NORMAL - a host can belong to multiple groups
+    // Example: localhost in both 'local' and 'managed' groups
+    
+    diagnose {
+      ansible-inventory --graph    // Shows host under each group
+      ansible-inventory --host $host  // Shows merged variables
+    }
+    
+    explanation: {
+      normal: "Hosts can belong to multiple groups simultaneously"
+      example: |
+        @all:
+          |--@local:
+          |  |--localhost      <- same host
+          |--@managed:
+          |  |--localhost      <- in two groups
+      
+      behavior: [
+        "Playbook runs on host ONCE even if in multiple matching groups",
+        "Variables merge according to precedence rules",
+        "Group-specific variables from ALL matching groups apply"
+      ]
+      
+      variable_merge: {
+        rule: "Later groups (alphabetically) override earlier ones"
+        check: ansible-inventory --host $host  // See final merged values
+      }
+    }
+    
+    not_an_error: "This is intentional design for flexible host categorization"
+  }
 }
 
 // Module Errors

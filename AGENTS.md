@@ -12,6 +12,7 @@ Planning: PLAN.md | Changes: CHANGELOG.md | Scratchpad: SCRATCHPAD.md
 State {
   workingDirectory: $PWD
   venvActivated: false
+  useWrapper: false     // If true, prefix commands with ./ansible.sh
   currentTask: null
   targetHosts: []
   lastPlaybook: null
@@ -22,6 +23,54 @@ State {
   lastError: null
   sessionDiscoveries: [] // Accumulated knowledge this session
 }
+
+## Quick Start
+
+Run these commands first to orient yourself:
+
+QuickStart @auto {
+  // 1. Activate environment (choose one approach)
+  source .venv/bin/activate        // Option A: Activate venv (persists for session)
+  // OR use ./ansible.sh wrapper   // Option B: No activation needed (per-command)
+  
+  // 2. Discover infrastructure
+  ansible-inventory --graph        // See hosts and groups
+  
+  // 3. Verify connectivity
+  ansible localhost -m ping        // Test local connection
+  
+  // 4. Check project health
+  ansible-lint playbooks/          // Lint all playbooks
+  
+  // 5. Preview what site.yml does
+  ansible-playbook playbooks/site.yml --list-tasks
+  
+  // Now ready for tasks!
+}
+
+ExecutionModes {
+  // Two ways to run ansible commands:
+  
+  venvMode {
+    setup: source .venv/bin/activate
+    usage: ansible-playbook playbooks/site.yml
+    pros: ["Standard approach", "Tab completion works", "Persists for session"]
+    state: sets state.venvActivated = true
+  }
+  
+  wrapperMode {
+    setup: none
+    usage: ./ansible.sh ansible-playbook playbooks/site.yml
+    pros: ["No activation needed", "Works in fresh shells", "Stateless"]
+    note: "Prefix any ansible command with ./ansible.sh"
+  }
+  
+  // Both are equivalent - choose based on context
+  // Wrapper is useful for one-off commands or if venv state is unclear
+}
+
+Note: The inventory includes a remote host `elvira` which may be unreachable 
+unless configured. Focus on `localhost` for initial exploration.
 
 Constraints {
   // Shell-first philosophy
@@ -61,10 +110,14 @@ init @auto {
     if exists(.venv): 
       source .venv/bin/activate
       state.venvActivated = true
+    else if exists(./ansible.sh):
+      // Use wrapper mode - no activation needed
+      state.useWrapper = true
     else:
       suggest "./install_ansible"
   
   // Discover infrastructure automatically
+  // (use ./ansible.sh prefix if state.useWrapper)
   learn {
     state.knownHosts = discover.inventory() |> parseHosts
     state.knownRoles = discover.roles() |> parseList
