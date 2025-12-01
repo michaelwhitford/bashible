@@ -15,13 +15,20 @@ This project is a **bootstrapped foundation** for AI-assisted infrastructure aut
 
 ## AI Agent Requirements
 
-To work with this project, your AI agent needs shell access via one of these tools:
+This project works with **any AI agent that has access to a bash tool**. Examples include:
 
 | Tool                                                  | Description                                    |
 | ----------------------------------------------------- | ---------------------------------------------- |
+| [ECA](https://eca.dev)                                | Editor Code Assistant with shell tool          |
 | [Claude Code](https://docs.anthropic.com/claude-code) | Claude's official CLI with shell tool          |
 | [Aider](https://aider.chat)                           | AI pair programming with shell access          |
 | [MCP Shell Server](https://modelcontextprotocol.io)   | Any MCP client with shell tool                 |
+
+**System requirements:**
+- **Python 3.9+** — Required for Ansible
+- **Bash** — For shell commands and the install script
+
+The `./install_ansible` script creates a `.venv` directory with Ansible installed, keeping dependencies isolated from your system Python.
 
 The essential capability: **live shell execution**. This lets the AI agent inspect infrastructure state, run ad-hoc commands, test playbooks incrementally, and verify changes work before committing.
 
